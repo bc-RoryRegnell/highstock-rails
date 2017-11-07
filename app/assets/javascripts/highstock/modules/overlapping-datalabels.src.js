@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v5.0.11 (2017-05-04)
+ * @license Highcharts JS v6.0.2 (2017-10-20)
  *
  * (c) 2009-2017 Torstein Honsi
  *
@@ -25,6 +25,7 @@
          */
         var Chart = H.Chart,
             each = H.each,
+            objectEach = H.objectEach,
             pick = H.pick,
             addEvent = H.addEvent;
 
@@ -34,6 +35,24 @@
         Chart.prototype.callbacks.push(function(chart) {
             function collectAndHide() {
                 var labels = [];
+
+                // Consider external label collectors
+                each(chart.labelCollectors || [], function(collector) {
+                    labels = labels.concat(collector());
+                });
+
+                each(chart.yAxis || [], function(yAxis) {
+                    if (
+                        yAxis.options.stackLabels &&
+                        !yAxis.options.stackLabels.allowOverlap
+                    ) {
+                        objectEach(yAxis.stacks, function(stack) {
+                            objectEach(stack, function(stackItem) {
+                                labels.push(stackItem.label);
+                            });
+                        });
+                    }
+                });
 
                 each(chart.series || [], function(series) {
                     var dlOptions = series.options.dataLabels,
@@ -61,11 +80,8 @@
                 chart.hideOverlappingLabels(labels);
             }
 
-            // Do it now ...
-            collectAndHide();
-
-            // ... and after each chart redraw
-            addEvent(chart, 'redraw', collectAndHide);
+            // Do it on render and after each chart redraw
+            addEvent(chart, 'render', collectAndHide);
 
         });
 
@@ -87,6 +103,7 @@
                 parent1,
                 parent2,
                 padding,
+                bBox,
                 intersectRect = function(x1, y1, w1, h1, x2, y2, w2, h2) {
                     return !(
                         x2 > x1 + w1 ||
@@ -96,12 +113,20 @@
                     );
                 };
 
-            // Mark with initial opacity
             for (i = 0; i < len; i++) {
                 label = labels[i];
                 if (label) {
+
+                    // Mark with initial opacity
                     label.oldOpacity = label.opacity;
                     label.newOpacity = 1;
+
+                    // Get width and height if pure text nodes (stack labels)
+                    if (!label.width) {
+                        bBox = label.getBBox();
+                        label.width = bBox.width;
+                        label.height = bBox.height;
+                    }
                 }
             }
 
@@ -129,7 +154,7 @@
                         parent1 = label1.parentGroup;
                         parent2 = label2.parentGroup;
                         // Substract the padding if no background or border (#4333)
-                        padding = 2 * (label1.box ? 0 : label1.padding);
+                        padding = 2 * (label1.box ? 0 : (label1.padding || 0));
                         isIntersecting = intersectRect(
                             pos1.x + parent1.translateX,
                             pos1.y + parent1.translateY,
