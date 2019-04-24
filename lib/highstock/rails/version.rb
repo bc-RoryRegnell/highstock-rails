@@ -1,5 +1,5 @@
 module Highstock
   module Rails
-    VERSION = "6.2.0"
+    VERSION = "7.1.1"
   end
 end
