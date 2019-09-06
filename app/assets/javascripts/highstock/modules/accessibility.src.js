@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v7.1.1 (2019-04-09)
+ * @license Highcharts JS v7.2.0 (2019-09-03)
  *
  * Accessibility module
  *
@@ -232,33 +232,33 @@
             /**
              * Utility function to clone a mouse event for re-dispatching.
              * @private
-             * @param {global.Event} event The event to clone.
+             * @param {global.Event} e The event to clone.
              * @return {global.Event} The cloned event
              */
-            cloneMouseEvent: function (event) {
+            cloneMouseEvent: function (e) {
                 if (typeof win.MouseEvent === 'function') {
-                    return new win.MouseEvent(event.type, event);
+                    return new win.MouseEvent(e.type, e);
                 }
                 // No MouseEvent support, try using initMouseEvent
                 if (doc.createEvent) {
                     var evt = doc.createEvent('MouseEvent');
                     if (evt.initMouseEvent) {
                         evt.initMouseEvent(
-                            event.type,
-                            event.canBubble,
-                            event.cancelable,
-                            event.view,
-                            event.detail,
-                            event.screenX,
-                            event.screenY,
-                            event.clientX,
-                            event.clientY,
-                            event.ctrlKey,
-                            event.altKey,
-                            event.shiftKey,
-                            event.metaKey,
-                            event.button,
-                            event.relatedTarget
+                            e.type,
+                            e.type === 'click' || e.canBubble, // #10561
+                            e.cancelable,
+                            e.view,
+                            e.detail,
+                            e.screenX,
+                            e.screenY,
+                            e.clientX,
+                            e.clientY,
+                            e.ctrlKey,
+                            e.altKey,
+                            e.shiftKey,
+                            e.metaKey,
+                            e.button,
+                            e.relatedTarget
                         );
                         return evt;
                     }
@@ -266,7 +266,7 @@
                     // Fallback to basic Event
                     evt = doc.createEvent('Event');
                     if (evt.initEvent) {
-                        evt.initEvent(event.type, true, true);
+                        evt.initEvent(e.type, true, true);
                         return evt;
                     }
                 }
@@ -342,7 +342,7 @@
                     padding: 0,
                     margin: 0,
                     left: bBox.x + 'px',
-                    top: bBox.y - this.chart.containerHeight + 'px'
+                    top: bBox.y - this.chart.chartHeight + 'px'
                 });
 
                 // Handle pre-click
@@ -394,10 +394,10 @@
                     var rectEl = el.getBoundingClientRect(),
                         rectDiv = div.getBoundingClientRect();
                     return {
-                        x: rectEl.x - rectDiv.x,
-                        y: rectEl.y - rectDiv.y,
-                        width: rectEl.width,
-                        height: rectEl.height
+                        x: rectEl.left - rectDiv.left,
+                        y: rectEl.top - rectDiv.top,
+                        width: rectEl.right - rectEl.left,
+                        height: rectEl.bottom - rectEl.top
                     };
                 }
             },
@@ -498,35 +498,6 @@
                 });
                 this.eventRemovers = [];
                 this.domElements = [];
-            },
-
-
-            /**
-             * Utility function to strip tags from a string. Used for aria-label
-             * attributes, painting on a canvas will fail if the text contains tags.
-             * @private
-             * @param {string} s The string to strip tags from
-             * @return {string} The new string.
-             */
-            stripTags: function (s) {
-                return typeof s === 'string' ? s.replace(/<\/?[^>]+(>|$)/g, '') : s;
-            },
-
-
-            /**
-             * HTML encode some characters vulnerable for XSS.
-             * @private
-             * @param {string} html The input string.
-             * @return {string} The escaped string.
-             */
-            htmlencode: function (html) {
-                return html
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;')
-                    .replace(/'/g, '&#x27;')
-                    .replace(/\//g, '&#x2F;');
             },
 
 
@@ -812,18 +783,32 @@
              * whenever we want, by setting focus to this div and not preventing the
              * default tab action. We also use this when users come back into the chart
              * by tabbing back, in order to navigate from the end of the chart.
+             *
+             * Screen reader users can also use heading-shortcuts to jump out of the
+             * chart with this.
+             *
              * @private
              */
             addExitAnchor: function () {
                 var chart = this.chart,
+                    exitAnchorWrapper = this.exitAnchorWrapper =
+                        doc.createElement('div'),
                     exitAnchor = this.exitAnchor = doc.createElement('h6'),
                     keyboardNavigation = this,
                     exitAnchorLabel = chart.langFormat(
                         'accessibility.svgContainerEnd', { chart: chart }
                     );
 
+                exitAnchor.innerHTML = exitAnchorLabel;
+
+                exitAnchorWrapper.setAttribute('aria-hidden', 'false');
+                exitAnchorWrapper.setAttribute(
+                    'class', 'highcharts-exit-anchor-wrapper'
+                );
+                exitAnchorWrapper.style.position = 'relative';
+                exitAnchorWrapper.style.outline = 'none';
+
                 exitAnchor.setAttribute('tabindex', '0');
-                exitAnchor.setAttribute('aria-label', exitAnchorLabel);
                 exitAnchor.setAttribute('aria-hidden', false);
 
                 // Hide exit anchor
@@ -831,16 +816,18 @@
                     position: 'absolute',
                     width: '1px',
                     height: '1px',
+                    bottom: '5px', // Avoid scrollbars (#10637)
                     zIndex: 0,
                     overflow: 'hidden',
                     outline: 'none'
                 });
 
-                chart.renderTo.appendChild(exitAnchor);
+                exitAnchorWrapper.appendChild(exitAnchor);
+                chart.renderTo.appendChild(exitAnchorWrapper);
 
                 // Update position on render
                 this.unbindExitAnchorUpdate = addEvent(chart, 'render', function () {
-                    this.renderTo.appendChild(exitAnchor);
+                    this.renderTo.appendChild(exitAnchorWrapper);
                 });
 
                 // Handle focus
@@ -905,9 +892,11 @@
                     this.unbindExitAnchorUpdate();
                     delete this.unbindExitAnchorUpdate;
                 }
-                if (this.exitAnchor && this.exitAnchor.parentNode) {
-                    this.exitAnchor.parentNode.removeChild(this.exitAnchor);
+                if (this.exitAnchorWrapper && this.exitAnchorWrapper.parentNode) {
+                    this.exitAnchorWrapper.parentNode
+                        .removeChild(this.exitAnchorWrapper);
                     delete this.exitAnchor;
+                    delete this.exitAnchorWrapper;
                 }
 
                 // Remove keydown handler
@@ -925,7 +914,67 @@
 
         return KeyboardNavigation;
     });
-    _registerModule(_modules, 'modules/accessibility/components/LegendComponent.js', [_modules['parts/Globals.js'], _modules['modules/accessibility/AccessibilityComponent.js'], _modules['modules/accessibility/KeyboardNavigationHandler.js']], function (H, AccessibilityComponent, KeyboardNavigationHandler) {
+    _registerModule(_modules, 'modules/accessibility/utilities.js', [], function () {
+        /* *
+         *
+         *  (c) 2009-2019 Øystein Moseng
+         *
+         *  Utility functions for accessibility module.
+         *
+         *  License: www.highcharts.com/license
+         *
+         * */
+
+
+        /**
+         * @private
+         * @param {string} str
+         * @return {string}
+         */
+        function escapeStringForHTML(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#x27;')
+                .replace(/\//g, '&#x2F;');
+        }
+
+        var Utilities = {
+
+            /**
+             * Used for aria-label attributes, painting on a canvas will fail if the
+             * text contains tags.
+             * @private
+             * @param {string} str
+             * @return {string}
+             */
+            stripHTMLTagsFromString: function (str) {
+                return typeof str === 'string' ?
+                    str.replace(/<\/?[^>]+(>|$)/g, '') : str;
+            },
+
+
+            /**
+             * @private
+             * @param {string} tag
+             * @param {string} text
+             * @return {string}
+             */
+            makeHTMLTagFromText: function (tag, text) {
+                return '<' + tag + '>' + escapeStringForHTML(text) + '</' + tag + '>';
+            },
+
+
+            escapeStringForHTML: escapeStringForHTML
+
+        };
+
+
+        return Utilities;
+    });
+    _registerModule(_modules, 'modules/accessibility/components/LegendComponent.js', [_modules['parts/Globals.js'], _modules['modules/accessibility/AccessibilityComponent.js'], _modules['modules/accessibility/KeyboardNavigationHandler.js'], _modules['modules/accessibility/utilities.js']], function (H, AccessibilityComponent, KeyboardNavigationHandler, A11yUtilities) {
         /* *
          *
          *  (c) 2009-2019 Øystein Moseng
@@ -937,6 +986,8 @@
          * */
 
 
+
+        var stripHTMLTags = A11yUtilities.stripHTMLTagsFromString;
 
 
         /**
@@ -1055,7 +1106,7 @@
                                     'accessibility.legendItem',
                                     {
                                         chart: chart,
-                                        itemName: component.stripTags(item.name)
+                                        itemName: stripHTMLTags(item.name)
                                     }
                                 )
                             },
@@ -1512,7 +1563,7 @@
 
         return MenuComponent;
     });
-    _registerModule(_modules, 'modules/accessibility/components/SeriesComponent.js', [_modules['parts/Globals.js'], _modules['modules/accessibility/AccessibilityComponent.js'], _modules['modules/accessibility/KeyboardNavigationHandler.js']], function (H, AccessibilityComponent, KeyboardNavigationHandler) {
+    _registerModule(_modules, 'modules/accessibility/components/SeriesComponent.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js'], _modules['modules/accessibility/AccessibilityComponent.js'], _modules['modules/accessibility/KeyboardNavigationHandler.js'], _modules['modules/accessibility/utilities.js']], function (H, U, AccessibilityComponent, KeyboardNavigationHandler, A11yUtilities) {
         /* *
          *
          *  (c) 2009-2019 Øystein Moseng
@@ -1525,8 +1576,12 @@
 
 
 
+        var isNumber = U.isNumber;
+
+
         var merge = H.merge,
-            pick = H.pick;
+            pick = H.pick,
+            stripHTMLTags = A11yUtilities.stripHTMLTagsFromString;
 
 
         /*
@@ -1538,6 +1593,115 @@
             if (H.seriesTypes[type]) {
                 H.seriesTypes[type].prototype.keyboardMoveVertical = false;
             }
+        });
+
+
+        /**
+         * Keep track of forcing markers.
+         * @private
+         */
+        H.addEvent(H.Series, 'render', function () {
+            var series = this,
+                chart = series.chart,
+                options = series.options,
+                a11yOptions = chart.options.accessibility || {},
+                points = series.points || [],
+                dataLength = points.length,
+                resetMarkerOptions = series.resetA11yMarkerOptions,
+                // We need markers for a11y
+                forceMarkers = a11yOptions.enabled &&
+                    (
+                        options.accessibility &&
+                        options.accessibility.enabled
+                    ) !== false &&
+                    (
+                        dataLength < a11yOptions.pointDescriptionThreshold ||
+                        a11yOptions.pointDescriptionThreshold === false ||
+                        dataLength < a11yOptions.pointNavigationThreshold ||
+                        a11yOptions.pointNavigationThreshold === false
+                    );
+
+            if (forceMarkers) {
+                // If markers are explicitly disabled on series, replace with markers
+                // that have zero opacity.
+                if (options.marker && options.marker.enabled === false) {
+                    series.a11yMarkersForced = true;
+                    merge(true, series.options, {
+                        marker: {
+                            enabled: true,
+                            states: {
+                                normal: {
+                                    opacity: 0
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // If we have point markers, we need to handle them
+                if (series._hasPointMarkers && series.points && series.points.length) {
+                    var i = dataLength,
+                        pointOptions;
+                    while (i--) {
+                        pointOptions = points[i].options;
+                        if (pointOptions.marker) {
+                            if (pointOptions.marker.enabled) {
+                                // Make sure opacity is overridden to show enabled
+                                // markers
+                                merge(true, pointOptions.marker, {
+                                    states: {
+                                        normal: {
+                                            opacity: pointOptions.marker.states &&
+                                                pointOptions.marker.states.normal &&
+                                                pointOptions.marker.states.normal
+                                                    .opacity || 1
+                                        }
+                                    }
+                                });
+                            } else {
+                                // Make sure hidden markers are enabled instead, and
+                                // opacity is out.
+                                merge(true, pointOptions.marker, {
+                                    enabled: true,
+                                    states: {
+                                        normal: {
+                                            opacity: 0
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+
+            } else if (series.a11yMarkersForced && resetMarkerOptions) {
+                // Series markers should not be forced, and we should reset to old
+                // options.
+                delete series.a11yMarkersForced;
+                merge(true, series.options, {
+                    marker: {
+                        enabled: resetMarkerOptions.enabled,
+                        states: {
+                            normal: {
+                                opacity: resetMarkerOptions.states &&
+                                    resetMarkerOptions.states.normal &&
+                                    resetMarkerOptions.states.normal.opacity
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+
+        /**
+         * Keep track of options to reset markers to if no longer forced.
+         * @private
+         */
+        H.addEvent(H.Series, 'afterSetOptions', function (e) {
+            this.resetA11yMarkerOptions = merge(
+                e.options.marker || {}, this.userOptions.marker || {}
+            );
         });
 
 
@@ -1590,10 +1754,10 @@
                 seriesA11yOptions.enabled === false ||
                 series.options.enableMouseTracking === false || // #8440
                 !series.visible ||
-                // Skip all points in a series where pointDescriptionThreshold is
+                // Skip all points in a series where pointNavigationThreshold is
                 // reached
-                (a11yOptions.pointDescriptionThreshold &&
-                a11yOptions.pointDescriptionThreshold <= series.points.length);
+                (a11yOptions.pointNavigationThreshold &&
+                a11yOptions.pointNavigationThreshold <= series.points.length);
         }
 
 
@@ -1878,7 +2042,7 @@
                 return false;
             }
             this.series.forEach(function (series) {
-                if (series === curPoint.series || isSkipSeries(series)) {
+                if (isSkipSeries(series)) {
                     return;
                 }
                 series.points.forEach(function (point) {
@@ -2012,15 +2176,17 @@
 
 
             /**
-             * Called on first render/updates to the chart, including options changes.
+             * Called on chart render. It is necessary to do this for render in case
+             * markers change on zoom/pixel density.
              */
-            onChartUpdate: function () {
+            onChartRender: function () {
                 var component = this,
                     chart = this.chart;
                 chart.series.forEach(function (series) {
                     component[
                         (series.options.accessibility &&
-                        series.options.accessibility.enabled) !== false ?
+                        series.options.accessibility.enabled) !== false &&
+                        series.visible ?
                             'addSeriesDescription' : 'hideSeriesFromScreenReader'
                     ](series);
                 });
@@ -2034,6 +2200,7 @@
             getKeyboardNavigation: function () {
                 var keys = this.keyCodes,
                     chart = this.chart,
+                    inverted = chart.inverted,
                     a11yOptions = chart.options.accessibility,
                     // Function that attempts to highlight next/prev point, returns
                     // the response number. Handles wrap around.
@@ -2053,23 +2220,25 @@
                     keyCodeMap: [
                         // Arrow sideways
                         [[
-                            keys.left, keys.right
+                            inverted ? keys.up : keys.left,
+                            inverted ? keys.down : keys.right
                         ], function (keyCode) {
-                            return attemptNextPoint.call(this, keyCode === keys.right);
+                            return attemptNextPoint.call(
+                                this, keyCode === keys.right || keyCode === keys.down
+                            );
                         }],
 
                         // Arrow vertical
                         [[
-                            keys.up, keys.down
+                            inverted ? keys.left : keys.up,
+                            inverted ? keys.right : keys.down
                         ], function (keyCode) {
-                            var down = keyCode === keys.down,
+                            var down = keyCode === keys.down || keyCode === keys.right,
                                 navOptions = a11yOptions.keyboardNavigation;
 
                             // Handle serialized mode, act like left/right
                             if (navOptions.mode && navOptions.mode === 'serialize') {
-                                return attemptNextPoint.call(
-                                    this, keyCode === keys.down
-                                );
+                                return attemptNextPoint.call(this, down);
                             }
 
                             // Normal mode, move between series
@@ -2386,7 +2555,7 @@
                         newPoint ? 'newPointAnnounce' + multiple : 'newDataAnnounce';
                 return chart.langFormat(
                     'accessibility.announceNewData.' + langKey, {
-                        chartTitle: this.stripTags(
+                        chartTitle: stripHTMLTags(
                             chart.options.title.text || chart.langFormat(
                                 'accessibility.defaultChartTitle', { chart: chart }
                             )
@@ -2472,12 +2641,19 @@
                     a11yOptions = chart.options.accessibility,
                     seriesA11yOptions = series.options.accessibility || {},
                     firstPointEl = component.getSeriesFirstPointElement(series),
-                    seriesEl = component.getSeriesElement(series);
+                    seriesEl = component.getSeriesElement(series),
+                    setScreenReaderProps = series.points && (
+                        series.points.length <
+                            a11yOptions.pointDescriptionThreshold ||
+                            a11yOptions.pointDescriptionThreshold === false
+                    ) && !seriesA11yOptions.exposeAsGroupOnly,
+                    setKeyboardProps = series.points && (
+                        series.points.length <
+                            a11yOptions.pointNavigationThreshold ||
+                            a11yOptions.pointNavigationThreshold === false
+                    );
 
                 if (seriesEl) {
-                    // Unhide series
-                    this.unhideElementFromScreenReaders(seriesEl);
-
                     // For some series types the order of elements do not match the
                     // order of points in series. In that case we have to reverse them
                     // in order for AT to read them out in an understandable order
@@ -2485,32 +2661,36 @@
                         component.reverseChildNodes(seriesEl);
                     }
 
-                    // Make individual point elements accessible if possible. Note: If
-                    // markers are disabled there might not be any elements there to
-                    // make accessible.
-                    if (
-                        series.points && (
-                            series.points.length <
-                                a11yOptions.pointDescriptionThreshold ||
-                            a11yOptions.pointDescriptionThreshold === false
-                        ) &&
-                        !seriesA11yOptions.exposeAsGroupOnly
-                    ) {
+                    // Unhide series element
+                    component.unhideElementFromScreenReaders(seriesEl);
+
+                    // Make individual point elements accessible if possible
+                    if (setScreenReaderProps || setKeyboardProps) {
                         series.points.forEach(function (point) {
                             var pointEl = point.graphic && point.graphic.element;
                             if (pointEl) {
-                                pointEl.setAttribute('role', 'img');
+                                // We always set tabindex, as long as we are setting
+                                // props.
                                 pointEl.setAttribute('tabindex', '-1');
-                                pointEl.setAttribute('aria-label',
-                                    component.stripTags(
-                                        seriesA11yOptions.pointDescriptionFormatter &&
-                                        seriesA11yOptions
-                                            .pointDescriptionFormatter(point) ||
-                                        a11yOptions.pointDescriptionFormatter &&
-                                        a11yOptions.pointDescriptionFormatter(point) ||
-                                        component
-                                            .defaultPointDescriptionFormatter(point)
-                                    ));
+
+                                if (setScreenReaderProps) {
+                                    // Set screen reader specific props
+                                    pointEl.setAttribute('role', 'img');
+                                    pointEl.setAttribute('aria-label',
+                                        stripHTMLTags(
+                                            seriesA11yOptions
+                                                .pointDescriptionFormatter &&
+                                            seriesA11yOptions
+                                                .pointDescriptionFormatter(point) ||
+                                            a11yOptions.pointDescriptionFormatter &&
+                                            a11yOptions
+                                                .pointDescriptionFormatter(point) ||
+                                            component
+                                                .defaultPointDescriptionFormatter(point)
+                                        ));
+                                } else {
+                                    pointEl.setAttribute('aria-hidden', true);
+                                }
                             }
                         });
                     }
@@ -2527,12 +2707,14 @@
                         seriesEl.setAttribute('tabindex', '-1');
                         seriesEl.setAttribute(
                             'aria-label',
-                            component.stripTags(
+                            stripHTMLTags(
                                 a11yOptions.seriesDescriptionFormatter &&
                                 a11yOptions.seriesDescriptionFormatter(series) ||
                                 component.defaultSeriesDescriptionFormatter(series)
                             )
                         );
+                    } else {
+                        seriesEl.setAttribute('aria-label', '');
                     }
                 }
             },
@@ -2612,7 +2794,7 @@
                         point.options.accessibility.description,
                     timeDesc = point.getA11yTimeDescription(),
                     numberFormat = function (value) {
-                        if (H.isNumber(value)) {
+                        if (isNumber(value)) {
                             var lang = H.defaultOptions.lang;
                             return H.numberFormat(
                                 value,
@@ -2969,7 +3151,7 @@
             /**
              * Get keyboard navigation handlers for this component.
              * @return {Array<Highcharts.KeyboardNavigationHandler>}
-             *      List of module objects
+             *         List of module objects
              */
             getKeyboardNavigation: function () {
                 return [
@@ -3179,7 +3361,8 @@
             /**
              * Get navigation for the range selector input boxes.
              * @private
-             * @return {Highcharts.KeyboardNavigationHandler} The module object.
+             * @return {Highcharts.KeyboardNavigationHandler}
+             *         The module object.
              */
             getRangeSelectorInputNavigation: function () {
                 var chart = this.chart,
@@ -3250,7 +3433,7 @@
             /**
              * Get keyboard navigation handlers for this component.
              * @return {Array<Highcharts.KeyboardNavigationHandler>}
-             *      List of module objects.
+             *         List of module objects.
              */
             getKeyboardNavigation: function () {
                 return [
@@ -3264,7 +3447,7 @@
 
         return RangeSelectorComponent;
     });
-    _registerModule(_modules, 'modules/accessibility/components/InfoRegionComponent.js', [_modules['parts/Globals.js'], _modules['modules/accessibility/AccessibilityComponent.js']], function (H, AccessibilityComponent) {
+    _registerModule(_modules, 'modules/accessibility/components/InfoRegionComponent.js', [_modules['parts/Globals.js'], _modules['modules/accessibility/AccessibilityComponent.js'], _modules['modules/accessibility/utilities.js']], function (H, AccessibilityComponent, A11yUtilities) {
         /* *
          *
          *  (c) 2009-2019 Øystein Moseng
@@ -3278,7 +3461,8 @@
 
 
         var merge = H.merge,
-            pick = H.pick;
+            pick = H.pick,
+            makeHTMLTagFromText = A11yUtilities.makeHTMLTagFromText;
 
 
         /**
@@ -3467,29 +3651,68 @@
             /**
              * The default formatter for the screen reader section.
              * @private
+             * @return {string}
              */
             defaultScreenReaderSectionFormatter: function () {
-                var chart = this.chart,
-                    options = chart.options,
-                    chartTypes = chart.types,
-                    axesDesc = this.getAxesDescription();
+                var options = this.chart.options;
+                return this.defaultTypeDescriptionHTML(this.chart) +
+                    this.defaultSubtitleHTML(options) +
+                    this.defaultCaptionHTML(options) +
+                    this.defaultAxisDescriptionHTML('xAxis') +
+                    this.defaultAxisDescriptionHTML('yAxis');
+            },
 
-                return '<h5>' +
-                (
-                    options.accessibility.typeDescription ||
-                    chart.getTypeDescription(chartTypes)
-                ) + '</h5>' + (
-                    options.subtitle && options.subtitle.text ?
-                        '<div>' + this.htmlencode(options.subtitle.text) + '</div>' : ''
-                ) + (
-                    options.accessibility.description ?
-                        '<div>' + options.accessibility.description + '</div>' : ''
-                ) + (axesDesc.xAxis ? (
-                    '<div>' + axesDesc.xAxis + '</div>'
-                ) : '') +
-                (axesDesc.yAxis ? (
-                    '<div>' + axesDesc.yAxis + '</div>'
-                ) : '');
+
+            /**
+             * @private
+             * @param {Highcharts.Options} chartOptions
+             * @return {string}
+             */
+            defaultCaptionHTML: function (chartOptions) {
+                var captionOptions = chartOptions.caption,
+                    captionText = captionOptions && captionOptions.text,
+                    descriptionText = chartOptions.accessibility.description ||
+                        captionText;
+                return descriptionText ?
+                    makeHTMLTagFromText('div', descriptionText) : '';
+            },
+
+
+            /**
+             * @private
+             * @param {string} axisCollection
+             * @return {string}
+             */
+            defaultAxisDescriptionHTML: function (axisCollection) {
+                var axisDesc = this.getAxesDescription()[axisCollection];
+                return axisDesc ? makeHTMLTagFromText('div', axisDesc) : '';
+            },
+
+
+            /**
+             * @private
+             * @param {Highcharts.Chart} chart
+             * @returns {string}
+             */
+            defaultTypeDescriptionHTML: function (chart) {
+                return chart.types ?
+                    makeHTMLTagFromText(
+                        'h5',
+                        chart.options.accessibility.typeDescription ||
+                            chart.getTypeDescription(chart.types)
+                    ) : '';
+            },
+
+
+            /**
+             * @private
+             * @param {Highcharts.Options} chartOptions
+             * @return {string}
+             */
+            defaultSubtitleHTML: function (options) {
+                var subtitle = options.subtitle,
+                    text = subtitle && subtitle.text;
+                return text ? makeHTMLTagFromText('div', text) : '';
             },
 
 
@@ -3643,7 +3866,7 @@
 
         return InfoRegionComponent;
     });
-    _registerModule(_modules, 'modules/accessibility/components/ContainerComponent.js', [_modules['parts/Globals.js'], _modules['modules/accessibility/AccessibilityComponent.js']], function (H, AccessibilityComponent) {
+    _registerModule(_modules, 'modules/accessibility/components/ContainerComponent.js', [_modules['parts/Globals.js'], _modules['modules/accessibility/AccessibilityComponent.js'], _modules['modules/accessibility/utilities.js']], function (H, AccessibilityComponent, A11yUtilities) {
         /* *
          *
          *  (c) 2009-2019 Øystein Moseng
@@ -3656,7 +3879,8 @@
 
 
 
-        var doc = H.win.document;
+        var doc = H.win.document,
+            stripHTMLTags = A11yUtilities.stripHTMLTagsFromString;
 
 
         /**
@@ -3685,12 +3909,12 @@
                     chartTitle = chart.options.title.text || chart.langFormat(
                         'accessibility.defaultChartTitle', { chart: chart }
                     ),
-                    svgContainerTitle = this.stripTags(chart.langFormat(
+                    svgContainerTitle = stripHTMLTags(chart.langFormat(
                         'accessibility.svgContainerTitle', {
                             chartTitle: chartTitle
                         }
                     )),
-                    svgContainerLabel = this.stripTags(chart.langFormat(
+                    svgContainerLabel = stripHTMLTags(chart.langFormat(
                         'accessibility.svgContainerLabel', {
                             chartTitle: chartTitle
                         }
@@ -3726,11 +3950,28 @@
                     chart.langFormat(
                         'accessibility.chartContainerLabel',
                         {
-                            title: this.stripTags(chartTitle),
+                            title: stripHTMLTags(chartTitle),
                             chart: chart
                         }
                     )
                 );
+
+                // Make credits readable by screen reader
+                var creditsEl = chart.credits && chart.credits.element;
+                if (creditsEl) {
+                    if (chart.credits.textStr) {
+                        creditsEl.setAttribute(
+                            'aria-label', stripHTMLTags(
+                                chart.langFormat(
+                                    'accessibility.credits', {
+                                        creditsStr: chart.credits.textStr
+                                    }
+                                )
+                            )
+                        );
+                    }
+                    this.unhideElementFromScreenReaders(creditsEl);
+                }
             },
 
 
@@ -3746,6 +3987,319 @@
 
 
         return ContainerComponent;
+    });
+    _registerModule(_modules, 'modules/accessibility/high-contrast-mode.js', [_modules['parts/Globals.js']], function (H) {
+        /* *
+         *
+         *  (c) 2009-2019 Øystein Moseng
+         *
+         *  Handling for Windows High Contrast Mode.
+         *
+         *  License: www.highcharts.com/license
+         *
+         * */
+
+
+
+        var isMS = H.isMS,
+            win = H.win,
+            doc = win.document;
+
+        var whcm = {
+
+            /**
+             * Detect WHCM in the browser.
+             *
+             * @function Highcharts#isHighContrastModeActive
+             * @private
+             * @return {boolean} Returns true if the browser is in High Contrast mode.
+             */
+            isHighContrastModeActive: function () {
+                if (
+                    win.matchMedia &&
+                    isMS &&
+                    /Edge\/\d./i.test(win.navigator.userAgent)
+                ) {
+                    // Use media query for Edge
+                    return win.matchMedia('(-ms-high-contrast: active)').matches;
+                }
+                if (isMS && win.getComputedStyle) {
+                    // Test BG image for IE
+                    var testDiv = doc.createElement('div');
+                    testDiv.style.backgroundImage = 'url(#)';
+                    doc.body.appendChild(testDiv);
+                    var bi = (
+                        testDiv.currentStyle || win.getComputedStyle(testDiv)
+                    ).backgroundImage;
+                    doc.body.removeChild(testDiv);
+                    return bi === 'none';
+                }
+                // Not used for other browsers
+                return false;
+            },
+
+            /**
+             * Force high contrast theme for the chart. The default theme is defined in
+             * a separate file.
+             *
+             * @function Highcharts#setHighContrastTheme
+             * @private
+             * @param {Highcharts.Chart} chart The chart to set the theme of.
+             */
+            setHighContrastTheme: function (chart) {
+                // We might want to add additional functionality here in the future for
+                // storing the old state so that we can reset the theme if HC mode is
+                // disabled. For now, the user will have to reload the page.
+
+                chart.highContrastModeActive = true;
+
+                // Apply theme to chart
+                var theme = chart.options.accessibility.highContrastTheme;
+                chart.update(theme, false);
+
+                // Force series colors (plotOptions is not enough)
+                chart.series.forEach(function (s) {
+                    var plotOpts = theme.plotOptions[s.type] || {};
+                    s.update({
+                        color: plotOpts.color || 'windowText',
+                        colors: [plotOpts.color || 'windowText'],
+                        borderColor: plotOpts.borderColor || 'window'
+                    });
+
+                    // Force point colors if existing
+                    s.points.forEach(function (p) {
+                        if (p.options && p.options.color) {
+                            p.update({
+                                color: plotOpts.color || 'windowText',
+                                borderColor: plotOpts.borderColor || 'window'
+                            }, false);
+                        }
+                    });
+                });
+
+                // The redraw for each series and after is required for 3D pie
+                // (workaround)
+                chart.redraw();
+            }
+
+        };
+
+
+        return whcm;
+    });
+    _registerModule(_modules, 'modules/accessibility/high-contrast-theme.js', [], function () {
+        /* *
+         *
+         *  (c) 2009-2019 Øystein Moseng
+         *
+         *  Default theme for Windows High Contrast Mode.
+         *
+         *  License: www.highcharts.com/license
+         *
+         * */
+
+
+        var theme = {
+            chart: {
+                backgroundColor: 'window'
+            },
+            title: {
+                style: {
+                    color: 'windowText'
+                }
+            },
+            subtitle: {
+                style: {
+                    color: 'windowText'
+                }
+            },
+            colorAxis: {
+                minColor: 'windowText',
+                maxColor: 'windowText',
+                stops: null
+            },
+            colors: ['windowText'],
+            xAxis: {
+                gridLineColor: 'windowText',
+                labels: {
+                    style: {
+                        color: 'windowText'
+                    }
+                },
+                lineColor: 'windowText',
+                minorGridLineColor: 'windowText',
+                tickColor: 'windowText',
+                title: {
+                    style: {
+                        color: 'windowText'
+                    }
+                }
+            },
+            yAxis: {
+                gridLineColor: 'windowText',
+                labels: {
+                    style: {
+                        color: 'windowText'
+                    }
+                },
+                lineColor: 'windowText',
+                minorGridLineColor: 'windowText',
+                tickColor: 'windowText',
+                title: {
+                    style: {
+                        color: 'windowText'
+                    }
+                }
+            },
+            tooltip: {
+                backgroundColor: 'window',
+                borderColor: 'windowText',
+                style: {
+                    color: 'windowText'
+                }
+            },
+            plotOptions: {
+                series: {
+                    lineColor: 'windowText',
+                    fillColor: 'window',
+                    borderColor: 'windowText',
+                    edgeColor: 'windowText',
+                    borderWidth: 1,
+                    dataLabels: {
+                        connectorColor: 'windowText',
+                        color: 'windowText',
+                        style: {
+                            color: 'windowText',
+                            textOutline: 'none'
+                        }
+                    },
+                    marker: {
+                        lineColor: 'windowText',
+                        fillColor: 'windowText'
+                    }
+                },
+                pie: {
+                    color: 'window',
+                    colors: ['window'],
+                    borderColor: 'windowText',
+                    borderWidth: 1
+                },
+                boxplot: {
+                    fillColor: 'window'
+                },
+                candlestick: {
+                    lineColor: 'windowText',
+                    fillColor: 'window'
+                },
+                errorbar: {
+                    fillColor: 'window'
+                }
+            },
+            legend: {
+                backgroundColor: 'window',
+                itemStyle: {
+                    color: 'windowText'
+                },
+                itemHoverStyle: {
+                    color: 'windowText'
+                },
+                itemHiddenStyle: {
+                    color: '#555'
+                },
+                title: {
+                    style: {
+                        color: 'windowText'
+                    }
+                }
+            },
+            credits: {
+                style: {
+                    color: 'windowText'
+                }
+            },
+            labels: {
+                style: {
+                    color: 'windowText'
+                }
+            },
+            drilldown: {
+                activeAxisLabelStyle: {
+                    color: 'windowText'
+                },
+                activeDataLabelStyle: {
+                    color: 'windowText'
+                }
+            },
+            navigation: {
+                buttonOptions: {
+                    symbolStroke: 'windowText',
+                    theme: {
+                        fill: 'window'
+                    }
+                }
+            },
+            rangeSelector: {
+                buttonTheme: {
+                    fill: 'window',
+                    stroke: 'windowText',
+                    style: {
+                        color: 'windowText'
+                    },
+                    states: {
+                        hover: {
+                            fill: 'window',
+                            stroke: 'windowText',
+                            style: {
+                                color: 'windowText'
+                            }
+                        },
+                        select: {
+                            fill: '#444',
+                            stroke: 'windowText',
+                            style: {
+                                color: 'windowText'
+                            }
+                        }
+                    }
+                },
+                inputBoxBorderColor: 'windowText',
+                inputStyle: {
+                    backgroundColor: 'window',
+                    color: 'windowText'
+                },
+                labelStyle: {
+                    color: 'windowText'
+                }
+            },
+            navigator: {
+                handles: {
+                    backgroundColor: 'window',
+                    borderColor: 'windowText'
+                },
+                outlineColor: 'windowText',
+                maskFill: 'transparent',
+                series: {
+                    color: 'windowText',
+                    lineColor: 'windowText'
+                },
+                xAxis: {
+                    gridLineColor: 'windowText'
+                }
+            },
+            scrollbar: {
+                barBackgroundColor: '#444',
+                barBorderColor: 'windowText',
+                buttonArrowColor: 'windowText',
+                buttonBackgroundColor: 'window',
+                buttonBorderColor: 'windowText',
+                rifleColor: 'windowText',
+                trackBackgroundColor: 'window',
+                trackBorderColor: 'windowText'
+            }
+        };
+
+
+        return theme;
     });
     _registerModule(_modules, 'modules/accessibility/options.js', [], function () {
         /* *
@@ -3812,7 +4366,18 @@
                  * @type  {boolean|number}
                  * @since 5.0.0
                  */
-                pointDescriptionThreshold: 500, // set to false to disable
+                pointDescriptionThreshold: 200,
+
+                /**
+                 * When a series contains more points than this, we no longer allow
+                 * keyboard navigation for it.
+                 *
+                 * Set to `false` to disable.
+                 *
+                 * @type  {boolean|number}
+                 * @since 7.1.3
+                 */
+                pointNavigationThreshold: false,
 
                 /**
                  * Whether or not to add a shortcut button in the screen reader
@@ -3871,16 +4436,29 @@
                  */
 
                 /**
+                 * Theme to apply to the chart when Windows High Contrast Mode is
+                 * detected.
+                 *
+                 * @since 7.1.3
+                 * @type {object}
+                 * @apioption accessibility.highContrastTheme
+                 */
+
+                /**
                  * A text description of the chart.
                  *
-                 * If the Accessibility module is loaded, this is included by default
-                 * as a long description of the chart in the hidden screen reader
-                 * information region.
+                 * **Note: Prefer using [caption](#caption.text) instead.**
                  *
-                 * Note: It is considered a best practice to make the description of the
-                 * chart visible to all users, so consider if this can be placed in text
-                 * around the chart instead.
+                 * If the Accessibility module is loaded, this option is included by
+                 * default as a long description of the chart in the hidden screen
+                 * reader information region.
                  *
+                 * Note: Since Highcharts now supports captions, it is preferred to
+                 * define the description there, as the caption benefits all users. The
+                 * caption will be available to screen reader users. If this option is
+                 * defined instead, the caption is hidden from screen reader users.
+                 *
+                 * @see [caption](#caption)
                  * @see [typeDescription](#accessibility.typeDescription)
                  *
                  * @type      {string}
@@ -4121,6 +4699,7 @@
                      * components can be added here.
                      *
                      * @since 7.1.0
+                     * @type {Array<string>}
                      */
                     order: ['series', 'zoom', 'rangeSelector', 'chartMenu', 'legend'],
 
@@ -4700,7 +5279,8 @@
                     defaultChartTitle: 'Chart',
                     viewAsDataTable: 'View as data table.',
                     chartHeading: 'Chart graphic.',
-                    chartContainerLabel: '{title}. Interactive chart.',
+                    chartContainerLabel: '{title}. Highcharts interactive chart.',
+                    credits: 'Chart credits: {creditsStr}',
                     svgContainerLabel: 'Interactive chart',
                     rangeSelectorMinInput: 'Select start date.',
                     rangeSelectorMaxInput: 'Select end date.',
@@ -4945,7 +5525,7 @@
         });
 
     });
-    _registerModule(_modules, 'modules/accessibility/accessibility.js', [_modules['parts/Globals.js'], _modules['modules/accessibility/KeyboardNavigationHandler.js'], _modules['modules/accessibility/AccessibilityComponent.js'], _modules['modules/accessibility/KeyboardNavigation.js'], _modules['modules/accessibility/components/LegendComponent.js'], _modules['modules/accessibility/components/MenuComponent.js'], _modules['modules/accessibility/components/SeriesComponent.js'], _modules['modules/accessibility/components/ZoomComponent.js'], _modules['modules/accessibility/components/RangeSelectorComponent.js'], _modules['modules/accessibility/components/InfoRegionComponent.js'], _modules['modules/accessibility/components/ContainerComponent.js'], _modules['modules/accessibility/options.js']], function (H, KeyboardNavigationHandler, AccessibilityComponent, KeyboardNavigation, LegendComponent, MenuComponent, SeriesComponent, ZoomComponent, RangeSelectorComponent, InfoRegionComponent, ContainerComponent, defaultOptions) {
+    _registerModule(_modules, 'modules/accessibility/accessibility.js', [_modules['parts/Globals.js'], _modules['modules/accessibility/KeyboardNavigationHandler.js'], _modules['modules/accessibility/AccessibilityComponent.js'], _modules['modules/accessibility/KeyboardNavigation.js'], _modules['modules/accessibility/components/LegendComponent.js'], _modules['modules/accessibility/components/MenuComponent.js'], _modules['modules/accessibility/components/SeriesComponent.js'], _modules['modules/accessibility/components/ZoomComponent.js'], _modules['modules/accessibility/components/RangeSelectorComponent.js'], _modules['modules/accessibility/components/InfoRegionComponent.js'], _modules['modules/accessibility/components/ContainerComponent.js'], _modules['modules/accessibility/high-contrast-mode.js'], _modules['modules/accessibility/high-contrast-theme.js'], _modules['modules/accessibility/options.js']], function (H, KeyboardNavigationHandler, AccessibilityComponent, KeyboardNavigation, LegendComponent, MenuComponent, SeriesComponent, ZoomComponent, RangeSelectorComponent, InfoRegionComponent, ContainerComponent, whcm, highContrastTheme, defaultOptions) {
         /* *
          *
          *  (c) 2009-2019 Øystein Moseng
@@ -4955,6 +5535,32 @@
          *  License: www.highcharts.com/license
          *
          * */
+
+        /**
+         * @interface Highcharts.PointAccessibilityOptionsObject
+         *//**
+         * Provide a description of the data point, announced to screen readers.
+         * @name Highcharts.PointAccessibilityOptionsObject#description
+         * @type {string|undefined}
+         * @requires modules/accessibility
+         * @since 7.1.0
+         */
+
+        /* *
+         * @interface Highcharts.PointOptionsObject in parts/Point.ts
+         *//**
+         * @name Highcharts.PointOptionsObject#accessibility
+         * @type {Highcharts.PointAccessibilityOptionsObject|undefined}
+         * @requires modules/accessibility
+         * @since 7.1.0
+         *//**
+         * A description of the point to add to the screen reader information about the
+         * point. Requires the Accessibility module.
+         * @name Highcharts.PointOptionsObject#description
+         * @type {string|undefined}
+         * @requires modules/accessibility
+         * @since 5.0.0
+         */
 
 
 
@@ -4967,7 +5573,11 @@
 
 
         // Add default options
-        merge(true, H.defaultOptions, defaultOptions);
+        merge(true, H.defaultOptions, defaultOptions, {
+            accessibility: {
+                highContrastTheme: highContrastTheme
+            }
+        });
 
         // Expose classes on Highcharts namespace
         H.KeyboardNavigationHandler = KeyboardNavigationHandler;
@@ -4986,7 +5596,7 @@
              *
              * @param {number} margin
              *
-             * @param {Higcharts.CSSObject} style
+             * @param {Highcharts.CSSObject} style
              */
             addFocusBorder: function (margin, style) {
                 // Allow updating by just adding new border
@@ -5172,10 +5782,11 @@
              */
             update: function () {
                 var components = this.components,
-                    a11yOptions = this.chart.options.accessibility;
+                    chart = this.chart,
+                    a11yOptions = chart.options.accessibility;
 
                 // Update the chart type list as this is used by multiple modules
-                this.chart.types = this.getChartTypes();
+                chart.types = this.getChartTypes();
 
                 // Update markup
                 Object.keys(components).forEach(function (componentName) {
@@ -5186,6 +5797,14 @@
                 this.keyboardNavigation.update(
                     a11yOptions.keyboardNavigation.order
                 );
+
+                // Handle high contrast mode
+                if (
+                    !chart.highContrastModeActive && // Only do this once
+                    whcm.isHighContrastModeActive(chart)
+                ) {
+                    whcm.setHighContrastTheme(chart);
+                }
             },
 
 
@@ -5202,7 +5821,9 @@
                 });
 
                 // Kill keyboard nav
-                this.keyboardNavigation.destroy();
+                if (this.keyboardNavigation) {
+                    this.keyboardNavigation.destroy();
+                }
 
                 // Hide container from screen readers if it exists
                 if (chart.renderTo) {

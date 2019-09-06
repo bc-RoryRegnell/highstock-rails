@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v7.1.1 (2019-04-09)
+ * @license Highcharts JS v7.2.0 (2019-09-03)
  *
  * Annotations module
  *
@@ -28,7 +28,8 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'annotations/eventEmitterMixin.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'annotations/eventEmitterMixin.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+        var objectEach = U.objectEach;
 
         var fireEvent = H.fireEvent;
 
@@ -39,6 +40,7 @@
          *   The units of the distance are specific to a transformation,
          *   e.g. for rotation they are radians, for scaling they are scale factors.
          *
+         * @private
          * @mixin
          * @memberOf Annotation
          */
@@ -57,7 +59,7 @@
                     }
                 );
 
-                H.objectEach(emitter.options.events, function (event, type) {
+                objectEach(emitter.options.events, function (event, type) {
                     var eventHandler = function (e) {
                         if (type !== 'click' || !emitter.cancelClick) {
                             event.call(
@@ -126,8 +128,6 @@
                 if (e.button === 2) {
                     return;
                 }
-
-                e.stopPropagation();
 
                 e = pointer.normalize(e);
                 prevChartX = e.chartX;
@@ -326,7 +326,7 @@
          *        a control point
          * @param {Annotation.ControlPoint.Options} options an options object
          * @param {number} [index]
-         **/
+         */
         function ControlPoint(chart, target, options, index) {
             this.chart = chart;
             this.target = target;
@@ -449,22 +449,55 @@
 
         return ControlPoint;
     });
-    _registerModule(_modules, 'annotations/MockPoint.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'annotations/MockPoint.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+
+        var defined = U.defined;
+
 
         /**
-         * A point-like object, a mock point or a point uses in series.
+         * A mock point label configuration.
          *
-         * @typedef {Highcharts.Point | Annotation.MockPoint} Annotation.PointLike
+         * @interface Annotation.MockLabelOptionsObject
+         *//**
+         * X value translated to x axis scale
+         * @name Annotation.MockLabelOptionsObject#x
+         * @type {number|undefined}
+         *//**
+         * Y value translated to y axis scale
+         * @name Annotation.MockLabelOptionsObject#y
+         * @type {number|undefined}
+         *//**
+         * @name Annotation.MockLabelOptionsObject#point
+         * @type {Highcharts.Point}
          */
 
         /**
          * A mock point configuration.
          *
-         * @typedef {Object} Annotation.MockPoint.Options
-         * @property {number} x x value for the point in xAxis scale or pixels
-         * @property {number} y y value for the point in yAxis scale or pixels
-         * @property {string|number|Highcharts.Axis} [xAxis] xAxis instance, index or id
-         * @property {string|number|Highcharts.Axis} [yAxis] yAxis instance, index or id
+         * @interface Highcharts.MockPointOptionsObject
+         *//**
+         * x value for the point in xAxis scale or pixels
+         * @name Highcharts.MockPointOptionsObject#x
+         * @type {number}
+         *//**
+         * y value for the point in yAxis scale or pixels
+         * @name Highcharts.MockPointOptionsObject#y
+         * @type {number}
+         *//**
+         * xAxis index or id
+         * @name Highcharts.MockPointOptionsObject#xAxis
+         * @type {Highcharts.Axis|number|string|undefined}
+         *//**
+         * yAxis index or id
+         * @name Highcharts.MockPointOptionsObject#yAxis
+         * @property {Highcharts.Axis|number|string|undefined}
+         */
+
+        /**
+         * A point-like object, a mock point or a point uses in series.
+         *
+         * @private
+         * @typedef {Highcharts.Point|Highcharts.MockPoint} Highcharts.PointLike
          */
 
         /**
@@ -472,12 +505,15 @@
          * It is created when there is a need of pointing to some chart's position
          * using axis values or pixel values
          *
+         * @private
          * @class
-         * @memberOf Annotation
+         * @name Highcharts.MockPoint
          *
-         * @param {Chart} chart a chart instance
-         * @param {Controllable} [target] a controllable instance
-         * @param {Annotation.MockPoint.Options} options an options object
+         * @param {Highcharts.Chart} chart
+         *        The chart object
+         *
+         * @param {Highcharts.MockPointOptionsObject} options
+         *        The options object
          */
         function MockPoint(chart, target, options) {
             /**
@@ -502,7 +538,7 @@
             /**
              * Options for the mock point.
              *
-             * @type {Annotation.MockPoint.Options}
+             * @type {Highcharts.MockPointOptionsObject}
              */
             this.options = options;
 
@@ -677,7 +713,7 @@
                 this.series[axisName] =
                     axisOptions instanceof H.Axis ?
                         axisOptions :
-                        H.defined(axisOptions) ?
+                        defined(axisOptions) ?
                             chart[axisName][axisOptions] || chart.get(axisOptions) :
                             null;
             },
@@ -734,13 +770,13 @@
                     isInside = true;
 
                 if (xAxis) {
-                    isInside = H.defined(plotX) && plotX >= 0 && plotX <= xAxis.len;
+                    isInside = defined(plotX) && plotX >= 0 && plotX <= xAxis.len;
                 }
 
                 if (yAxis) {
                     isInside =
                         isInside &&
-                        H.defined(plotY) &&
+                        defined(plotY) &&
                         plotY >= 0 && plotY <= yAxis.len;
                 }
 
@@ -864,12 +900,18 @@
 
         return MockPoint;
     });
-    _registerModule(_modules, 'annotations/controllable/controllableMixin.js', [_modules['parts/Globals.js'], _modules['annotations/ControlPoint.js'], _modules['annotations/MockPoint.js']], function (H, ControlPoint, MockPoint) {
+    _registerModule(_modules, 'annotations/controllable/controllableMixin.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js'], _modules['annotations/ControlPoint.js'], _modules['annotations/MockPoint.js']], function (H, U, ControlPoint, MockPoint) {
+
+        var isObject = U.isObject,
+            isString = U.isString,
+            splat = U.splat;
+
 
         /**
          * It provides methods for handling points, control points
          * and points transformations.
          *
+         * @private
          * @mixin
          * @memberOf Annotation
          */
@@ -910,7 +952,7 @@
             getPointsOptions: function () {
                 var options = this.options;
 
-                return options.points || (options.point && H.splat(options.point));
+                return options.points || (options.point && splat(options.point));
             },
 
             /**
@@ -1003,10 +1045,13 @@
             /**
              * Map point's options to a point-like object.
              *
-             * @param {Annotation.MockPoint.Options} pointOptions point's options
-             * @param {Annotation.PointLike} point a point like instance
-             * @return {Annotation.PointLike|null} if the point is
-             *         found/set returns this point, otherwise null
+             * @param {Highcharts.MockPointOptionsObject} pointOptions
+             *        point's options
+             * @param {Highcharts.PointLike} point
+             *        a point like instance
+             *
+             * @return {Highcharts.PointLike|null}
+             *         if the point is found/set returns this point, otherwise null
              */
             point: function (pointOptions, point) {
                 if (pointOptions && pointOptions.series) {
@@ -1014,13 +1059,13 @@
                 }
 
                 if (!point || point.series === null) {
-                    if (H.isObject(pointOptions)) {
+                    if (isObject(pointOptions)) {
                         point = new MockPoint(
                             this.chart,
                             this,
                             pointOptions
                         );
-                    } else if (H.isString(pointOptions)) {
+                    } else if (isString(pointOptions)) {
                         point = this.chart.get(pointOptions) || null;
                     } else if (typeof pointOptions === 'function') {
                         var pointConfig = pointOptions.call(point, this);
@@ -1193,6 +1238,30 @@
             },
 
             /**
+             * Translate shape within controllable item.
+             * Replaces `controllable.translate` method.
+             *
+             * @param {number} dx translation for x coordinate
+             * @param {number} dy translation for y coordinate
+             */
+            translateShape: function (dx, dy) {
+                var chart = this.annotation.chart,
+                    // Annotation.options
+                    shapeOptions = this.annotation.userOptions,
+                    // Chart.options.annotations
+                    annotationIndex = chart.annotations.indexOf(this.annotation),
+                    chartOptions = chart.options.annotations[annotationIndex];
+
+                this.translatePoint(dx, dy, 0);
+
+                // Options stored in:
+                // - chart (for exporting)
+                // - current config (for redraws)
+                chartOptions[this.collection][this.index].point = this.options.point;
+                shapeOptions[this.collection][this.index].point = this.options.point;
+            },
+
+            /**
              * Rotate a controllable.
              *
              * @param {number} cx origin x rotation
@@ -1272,7 +1341,12 @@
 
         return controllableMixin;
     });
-    _registerModule(_modules, 'annotations/controllable/markerMixin.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'annotations/controllable/markerMixin.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+
+        var defined = U.defined,
+            objectEach = U.objectEach,
+            splat = U.splat;
+
 
         /**
          * Options for configuring markers for annotations.
@@ -1370,6 +1444,7 @@
         };
 
         /**
+         * @private
          * @mixin
          */
         var markerMixin = {
@@ -1386,7 +1461,7 @@
                     chart = item.chart,
                     defs = chart.options.defs,
                     fill = itemOptions.fill,
-                    color = H.defined(fill) && fill !== 'none' ?
+                    color = defined(fill) && fill !== 'none' ?
                         fill :
                         itemOptions.stroke,
 
@@ -1433,12 +1508,12 @@
             function recurse(config, parent) {
                 var ret;
 
-                H.splat(config).forEach(function (item) {
+                splat(config).forEach(function (item) {
                     var node = ren.createElement(item.tagName),
                         attr = {};
 
                     // Set attributes
-                    H.objectEach(item, function (val, key) {
+                    objectEach(item, function (val, key) {
                         if (
                             key !== 'tagName' &&
                             key !== 'children' &&
@@ -1474,7 +1549,7 @@
         H.addEvent(H.Chart, 'afterGetContainer', function () {
             this.options.defs = H.merge(defaultMarkers, this.options.defs || {});
 
-            H.objectEach(this.options.defs, function (def) {
+            objectEach(this.options.defs, function (def) {
                 if (def.tagName === 'marker' && def.render !== false) {
                     this.renderer.addMarker(def.id, def);
                 }
@@ -1701,6 +1776,8 @@
                  */
                 type: 'rect',
 
+                translate: controllableMixin.translateShape,
+
                 render: function (parent) {
                     var attrs = this.attrsFromOptions(this.options);
 
@@ -1732,16 +1809,6 @@
                     this.graphic.placed = Boolean(position);
 
                     controllableMixin.redraw.call(this, animation);
-                },
-
-                translate: function (dx, dy) {
-                    var annotationOptions = this.annotation.userOptions,
-                        shapeOptions = annotationOptions[this.collection][this.index];
-
-                    this.translatePoint(dx, dy, 0);
-
-                    // Options stored in chart:
-                    shapeOptions.point = this.options.point;
                 }
             }
         );
@@ -1783,6 +1850,8 @@
                  */
                 type: 'circle',
 
+                translate: controllableMixin.translateShape,
+
                 render: function (parent) {
                     var attrs = this.attrsFromOptions(this.options);
 
@@ -1815,16 +1884,6 @@
                     controllableMixin.redraw.call(this, animation);
                 },
 
-                translate: function (dx, dy) {
-                    var annotationOptions = this.annotation.userOptions,
-                        shapeOptions = annotationOptions[this.collection][this.index];
-
-                    this.translatePoint(dx, dy, 0);
-
-                    // Options stored in chart:
-                    shapeOptions.point = this.options.point;
-                },
-
                 /**
                  * Set the radius.
                  *
@@ -1839,17 +1898,55 @@
 
         return ControllableCircle;
     });
-    _registerModule(_modules, 'annotations/controllable/ControllableLabel.js', [_modules['parts/Globals.js'], _modules['annotations/controllable/controllableMixin.js'], _modules['annotations/MockPoint.js']], function (H, controllableMixin, MockPoint) {
+    _registerModule(_modules, 'annotations/controllable/ControllableLabel.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js'], _modules['annotations/controllable/controllableMixin.js'], _modules['annotations/MockPoint.js']], function (H, U, controllableMixin, MockPoint) {
+
+        var isNumber = U.isNumber;
+
+
+
+        /**
+         * @private
+         * @interface Highcharts.AnnotationAnchorObject
+         *//**
+         * Relative to the plot area position
+         * @name Highcharts.AnnotationAnchorObject#relativePosition
+         * @type {Highcharts.AnnotationAnchorPositionObject}
+         *//**
+         * Absolute position
+         * @name Highcharts.AnnotationAnchorObject#absolutePosition
+         * @type {Highcharts.AnnotationAnchorPositionObject}
+         */
+
+        /**
+         * An object which denotes an anchor position
+         *
+         * @private
+         * @interface Highcharts.AnnotationAnchorPositionObject
+         *//**
+         * @name Highcharts.AnnotationAnchorPositionObject#x
+         * @property {number}
+         *//**
+         * @name Highcharts.AnnotationAnchorPositionObject#y
+         * @property {number}
+         *//**
+         * @name Highcharts.AnnotationAnchorPositionObject#height
+         * @property {number}
+         *//**
+         * @name Highcharts.AnnotationAnchorPositionObject#width
+         * @property {number}
+         */
 
         /**
          * A controllable label class.
          *
+         * @private
          * @class
+         * @name Annotation.ControllableLabel
+         *
          * @mixes Annotation.controllableMixin
-         * @memberOf Annotation
          *
          * @param {Highcharts.Annotation} annotation an annotation instance
-         * @param {Object} options a label's options
+         * @param {object} options a label's options
          * @param {number} index of the label
          **/
         function ControllableLabel(annotation, options, index) {
@@ -1861,7 +1958,7 @@
          * Shapes which do not have background - the object is used for proper
          * setting of the contrast color.
          *
-         * @type {Array<String>}
+         * @type {Array<string>}
          */
         ControllableLabel.shapesWithoutBackground = ['connector'];
 
@@ -2031,16 +2128,31 @@
                  * @param {number} dy translation for y coordinate
                  **/
                 translate: function (dx, dy) {
-                    var annotationOptions = this.annotation.userOptions,
-                        labelOptions = annotationOptions[this.collection][this.index];
+                    var chart = this.annotation.chart,
+                        // Annotation.options
+                        labelOptions = this.annotation.userOptions,
+                        // Chart.options.annotations
+                        annotationIndex = chart.annotations.indexOf(this.annotation),
+                        chartAnnotations = chart.options.annotations,
+                        chartOptions = chartAnnotations[annotationIndex],
+                        temp;
+
+                    if (chart.inverted) {
+                        temp = dx;
+                        dx = dy;
+                        dy = temp;
+                    }
 
                     // Local options:
                     this.options.x += dx;
                     this.options.y += dy;
 
                     // Options stored in chart:
-                    labelOptions.x = this.options.x;
-                    labelOptions.y = this.options.y;
+                    chartOptions[this.collection][this.index].x = this.options.x;
+                    chartOptions[this.collection][this.index].y = this.options.y;
+
+                    labelOptions[this.collection][this.index].x = this.options.x;
+                    labelOptions[this.collection][this.index].y = this.options.y;
                 },
 
                 render: function (parent) {
@@ -2148,8 +2260,9 @@
                 /**
                  * Returns the label position relative to its anchor.
                  *
-                 * @param {Annotation.controllableMixin.Anchor} anchor
-                 * @return {Annotation.controllableMixin.Position|null} position
+                 * @param {Highcharts.AnnotationAnchorObject} anchor
+                 *
+                 * @return {Highcharts.AnnotationAnchorPositionObject|null} position
                  */
                 position: function (anchor) {
                     var item = this.graphic,
@@ -2243,6 +2356,7 @@
 
         /**
          * General symbol definition for labels with connector
+         * @private
          */
         H.SVGRenderer.prototype.symbols.connector = function (x, y, w, h, options) {
             var anchorX = options && options.anchorX,
@@ -2251,7 +2365,7 @@
                 yOffset,
                 lateral = w / 2;
 
-            if (H.isNumber(anchorX) && H.isNumber(anchorY)) {
+            if (isNumber(anchorX) && isNumber(anchorY)) {
 
                 path = ['M', anchorX, anchorY];
 
@@ -2333,6 +2447,8 @@
                  */
                 type: 'image',
 
+                translate: controllableMixin.translateShape,
+
                 render: function (parent) {
                     var attrs = this.attrsFromOptions(this.options),
                         options = this.options;
@@ -2370,16 +2486,6 @@
                     this.graphic.placed = Boolean(position);
 
                     controllableMixin.redraw.call(this, animation);
-                },
-
-                translate: function (dx, dy) {
-                    var annotationOptions = this.annotation.userOptions,
-                        shapeOptions = annotationOptions[this.collection][this.index];
-
-                    this.translatePoint(dx, dy, 0);
-
-                    // Options stored in chart:
-                    shapeOptions.point = this.options.point;
                 }
             }
         );
@@ -2387,24 +2493,30 @@
 
         return ControllableImage;
     });
-    _registerModule(_modules, 'annotations/annotations.src.js', [_modules['parts/Globals.js'], _modules['annotations/controllable/controllableMixin.js'], _modules['annotations/controllable/ControllableRect.js'], _modules['annotations/controllable/ControllableCircle.js'], _modules['annotations/controllable/ControllablePath.js'], _modules['annotations/controllable/ControllableImage.js'], _modules['annotations/controllable/ControllableLabel.js'], _modules['annotations/eventEmitterMixin.js'], _modules['annotations/MockPoint.js'], _modules['annotations/ControlPoint.js']], function (H, controllableMixin, ControllableRect, ControllableCircle, ControllablePath, ControllableImage, ControllableLabel, eventEmitterMixin, MockPoint, ControlPoint) {
-        /**
-         * (c) 2009-2017 Highsoft, Black Label
+    _registerModule(_modules, 'annotations/annotations.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js'], _modules['annotations/controllable/controllableMixin.js'], _modules['annotations/controllable/ControllableRect.js'], _modules['annotations/controllable/ControllableCircle.js'], _modules['annotations/controllable/ControllablePath.js'], _modules['annotations/controllable/ControllableImage.js'], _modules['annotations/controllable/ControllableLabel.js'], _modules['annotations/eventEmitterMixin.js'], _modules['annotations/MockPoint.js'], _modules['annotations/ControlPoint.js']], function (H, U, controllableMixin, ControllableRect, ControllableCircle, ControllablePath, ControllableImage, ControllableLabel, eventEmitterMixin, MockPoint, ControlPoint) {
+        /* *
          *
-         * License: www.highcharts.com/license
-         */
+         *  (c) 2009-2017 Highsoft, Black Label
+         *
+         *  License: www.highcharts.com/license
+         *
+         * */
+
+
+
+        var defined = U.defined,
+            erase = U.erase,
+            splat = U.splat;
+
 
         var merge = H.merge,
             addEvent = H.addEvent,
             fireEvent = H.fireEvent,
-            defined = H.defined,
-            erase = H.erase,
             find = H.find,
-            isString = H.isString,
             pick = H.pick,
             reduce = H.reduce,
-            splat = H.splat,
-            destroyObjectProperties = H.destroyObjectProperties;
+            destroyObjectProperties = H.destroyObjectProperties,
+            chartProto = H.Chart.prototype;
 
         /* *********************************************************************
          *
@@ -2432,8 +2544,7 @@
          * existing points or created mock points
          *
          * @class
-         * @mixes Annotation.controllableMixin
-         * @mixes Annotation.eventEmitterMixin
+         * @name Highcharts.Annotation
          *
          * @param {Highcharts.Chart} chart a chart instance
          * @param {Highcharts.AnnotationsOptions} options the options object
@@ -2451,7 +2562,7 @@
             /**
              * The array of points which defines the annotation.
              *
-             * @type {Array<Annotation.PointLike>}
+             * @type {Array<Highcharts.Point>}
              */
             this.points = [];
 
@@ -2474,7 +2585,7 @@
             /**
              * The array of shapes which belong to the annotation.
              *
-             * @type {Array<Highcharts.Annotation.Shape>}
+             * @type {Array<Annotation.Shape>}
              */
             this.shapes = [];
 
@@ -2543,7 +2654,10 @@
             true,
             Annotation.prototype,
             controllableMixin,
-            eventEmitterMixin, /** @lends Annotation# */ {
+            eventEmitterMixin,
+            /** @lends Annotation# */
+            {
+
                 /**
                  * List of events for `annotation.options.events` that should not be
                  * added to `annotation.graphic` but to the `annotation`.
@@ -2551,14 +2665,12 @@
                  * @type {Array<string>}
                  */
                 nonDOMEvents: ['add', 'afterUpdate', 'remove'],
+
                 /**
                  * A basic type of an annotation. It allows to add custom labels
                  * or shapes. The items  can be tied to points, axis coordinates
                  * or chart pixel coordinates.
                  *
-                 * @private
-                 * @type {Object}
-                 * @ignore-options base, annotations.crookedLine
                  * @sample highcharts/annotations/basic/
                  *         Basic annotations
                  * @sample highcharts/demo/annotations/
@@ -2566,13 +2678,25 @@
                  * @sample highcharts/css/annotations
                  *         Styled mode
                  * @sample highcharts/annotations-advanced/controllable
-                 *          Controllable items
+                 *         Controllable items
                  * @sample {highstock} stock/annotations/fibonacci-retracements
                  *         Custom annotation, Fibonacci retracement
-                 * @since 6.0.0
-                 * @optionparent annotations.crookedLine
+                 *
+                 * @type         {Array<*>}
+                 * @since        6.0.0
+                 * @optionparent annotations
                  */
                 defaultOptions: {
+
+                    /**
+                     * Sets an ID for an annotation. Can be user later when removing an
+                     * annotation in [Chart#removeAnnotation(id)](
+                     * /class-reference/Highcharts.Chart#removeAnnotation) method.
+                     *
+                     * @type      {string|number}
+                     * @apioption annotations.id
+                     */
+
                     /**
                      * Whether the annotation is visible.
                      *
@@ -2585,7 +2709,10 @@
                      * Allow an annotation to be draggable by a user. Possible
                      * values are `"x"`, `"xy"`, `"y"` and `""` (disabled).
                      *
-                     * @type {string}
+                     * @sample highcharts/annotations/draggable/
+                     *         Annotations draggable: 'xy'
+                     *
+                     * @type       {string}
                      * @validvalue ["x", "xy", "y", ""]
                      */
                     draggable: 'xy',
@@ -2621,18 +2748,20 @@
                         /**
                          * The background color or gradient for the annotation's label.
                          *
-                         * @type {Color}
                          * @sample highcharts/annotations/label-presentation/
                          *         Set labels graphic options
+                         *
+                         * @type {Highcharts.ColorString|Highcharts.GradientColorObject|Highcharts.PatternObject}
                          */
                         backgroundColor: 'rgba(0, 0, 0, 0.75)',
 
                         /**
                          * The border color for the annotation's label.
                          *
-                         * @type {Color}
                          * @sample highcharts/annotations/label-presentation/
                          *         Set labels graphic options
+                         *
+                         * @type {Highcharts.ColorString}
                          */
                         borderColor: 'black',
 
@@ -2657,6 +2786,7 @@
                          *
                          * @sample highcharts/css/annotations
                          *         Styled mode annotations
+                         *
                          * @since 6.0.5
                          */
                         className: '',
@@ -2673,67 +2803,70 @@
                         /**
                          * The label's pixel distance from the point.
                          *
-                         * @type {number}
                          * @sample highcharts/annotations/label-position/
                          *         Set labels position
-                         * @default undefined
-                         * @apioption annotations.crookedLine.labelOptions.distance
+                         *
+                         * @type      {number}
+                         * @apioption annotations.labelOptions.distance
                          */
 
                         /**
-                         * A [format](https://www.highcharts.com/docs/chart-concepts/labels-and-string-formatting) string for the data label.
+                         * A
+                         * [format](https://www.highcharts.com/docs/chart-concepts/labels-and-string-formatting)
+                         * string for the data label.
                          *
-                         * @type {string}
-                         * @see    [plotOptions.series.dataLabels.format](
-                         *         plotOptions.series.dataLabels.format.html)
+                         * @see [plotOptions.series.dataLabels.format](plotOptions.series.dataLabels.format.html)
+                         *
                          * @sample highcharts/annotations/label-text/
                          *         Set labels text
-                         * @default undefined
-                         * @apioption annotations.crookedLine.labelOptions.format
+                         *
+                         * @type      {string}
+                         * @apioption annotations.labelOptions.format
                          */
 
                         /**
                          * Alias for the format option.
                          *
-                         * @type {string}
                          * @see [format](annotations.labelOptions.format.html)
+                         *
                          * @sample highcharts/annotations/label-text/
                          *         Set labels text
-                         * @default undefined
-                         * @apioption annotations.crookedLine.labelOptions.text
+                         *
+                         * @type      {string}
+                         * @apioption annotations.labelOptions.text
                          */
 
                         /**
-                         * Callback JavaScript function to format
-                         * the annotation's label. Note that if a `format` or `text`
-                         * are defined, the format or text take precedence and
-                         * the formatter is ignored. `This` refers to a * point object.
+                         * Callback JavaScript function to format the annotation's
+                         * label. Note that if a `format` or `text` are defined, the
+                         * format or text take precedence and the formatter is ignored.
+                         * `This` refers to a point object.
                          *
-                         * @type {function}
                          * @sample highcharts/annotations/label-text/
                          *         Set labels text
-                         * @default function () {
-                         *  return defined(this.y) ? this.y : 'Annotation label';
-                         * }
+                         *
+                         * @type    {Highcharts.FormatterCallbackFunction<Highcharts.Point>}
+                         * @default function () { return defined(this.y) ? this.y : 'Annotation label'; }
                          */
                         formatter: function () {
                             return defined(this.y) ? this.y : 'Annotation label';
                         },
 
                         /**
-                         * How to handle the annotation's label that flow
-                         * outside the plot area. The justify option aligns the label
-                         * inside the plot area.
+                         * How to handle the annotation's label that flow outside the
+                         * plot area. The justify option aligns the label inside the
+                         * plot area.
                          *
-                         * @validvalue ["allow", "justify"]
                          * @sample highcharts/annotations/label-crop-overflow/
                          *         Crop or justify labels
+                         *
+                         * @validvalue ["allow", "justify"]
                          */
                         overflow: 'justify',
 
                         /**
                          * When either the borderWidth or the backgroundColor is set,
-                         * this is the padding within the box.
+                         * this    is the padding within the box.
                          *
                          * @sample highcharts/annotations/label-presentation/
                          *         Set labels graphic options
@@ -2741,13 +2874,14 @@
                         padding: 5,
 
                         /**
-                         * The shadow of the box. The shadow can be
-                         * an object configuration containing
-                         * `color`, `offsetX`, `offsetY`, `opacity` and `width`.
+                         * The shadow of the box. The shadow can be an object
+                         * configuration containing `color`, `offsetX`, `offsetY`,
+                         * `opacity` and `width`.
                          *
-                         * @type {Boolean|Object}
                          * @sample highcharts/annotations/label-presentation/
                          *         Set labels graphic options
+                         *
+                         * @type {boolean|Highcharts.ShadowOptionsObject}
                          */
                         shadow: false,
 
@@ -2755,7 +2889,6 @@
                          * The name of a symbol to use for the border around the label.
                          * Symbols are predefined functions on the Renderer object.
                          *
-                         * @type {string}
                          * @sample highcharts/annotations/shapes/
                          *         Available shapes for labels
                          */
@@ -2764,24 +2897,25 @@
                         /**
                          * Styles for the annotation's label.
                          *
-                         * @type {CSSObject}
+                         * @see [plotOptions.series.dataLabels.style](plotOptions.series.dataLabels.style.html)
+                         *
                          * @sample highcharts/annotations/label-presentation/
                          *         Set labels graphic options
-                         * @see    [plotOptions.series.dataLabels.style](
-                         *         plotOptions.series.dataLabels.style.html)
+                         *
+                         * @type {Highcharts.CSSObject}
                          */
                         style: {
+                            /** @ignore */
                             fontSize: '11px',
+                            /** @ignore */
                             fontWeight: 'normal',
+                            /** @ignore */
                             color: 'contrast'
                         },
 
                         /**
-                         * Whether to [use HTML](http://www.highcharts.com/docs/chart-concepts/labels-and-string-formatting#html)
+                         * Whether to [use HTML](https://www.highcharts.com/docs/chart-concepts/labels-and-string-formatting#html)
                          * to render the annotation's label.
-                         *
-                         * @type {boolean}
-                         * @default false
                          */
                         useHTML: false,
 
@@ -2821,60 +2955,58 @@
                      * multiple labels, they can be added to the
                      * [labelOptions](annotations.labelOptions.html).
                      *
-                     * @type {Array<Object>}
-                     * @extends annotations.crookedLine.labelOptions
-                     * @apioption annotations.crookedLine.labels
+                     * @type      {Array<*>}
+                     * @extends   annotations.labelOptions
+                     * @apioption annotations.labels
                      */
 
                     /**
-                     * This option defines the point to which the label
-                     * will be connected.
-                     * It can be either the point which exists in the series - it is
-                     * referenced by the point's id - or a new point with defined x, y
-                     * properies and optionally axes.
+                     * This option defines the point to which the label will be
+                     * connected. It can be either the point which exists in the
+                     * series - it is referenced by the point's id - or a new point with
+                     * defined x, y properties and optionally axes.
                      *
-                     * @type {string|MockPointOptions}
                      * @sample highcharts/annotations/mock-point/
                      *         Attach annotation to a mock point
-                     * @apioption annotations.crookedLine.labels.point
+                     *
+                     * @type      {string|Highcharts.MockPointOptionsObject}
+                     * @apioption annotations.labels.point
                      */
 
                     /**
                      * The x position of the point. Units can be either in axis
                      * or chart pixel coordinates.
                      *
-                     * @type {number}
-                     * @apioption annotations.crookedLine.labels.point.x
+                     * @type      {number}
+                     * @apioption annotations.labels.point.x
                      */
 
                     /**
                      * The y position of the point. Units can be either in axis
                      * or chart pixel coordinates.
                      *
-                     * @type {number}
-                     * @apioption annotations.crookedLine.labels.point.y
+                     * @type      {number}
+                     * @apioption annotations.labels.point.y
                      */
 
                     /**
-                     * This number defines which xAxis the point is connected to.
-                     * It refers to either the axis id or the index of the axis
-                     * in the xAxis array. If the option is not configured or
-                     * the axis is not found the point's
-                     * x coordinate refers to the chart pixels.
+                     * This number defines which xAxis the point is connected to. It
+                     * refers to either the axis id or the index of the axis in the
+                     * xAxis array. If the option is not configured or the axis is not
+                     * found the point's x coordinate refers to the chart pixels.
                      *
-                     * @type {number|string}
-                     * @apioption annotations.crookedLine.labels.point.xAxis
+                     * @type      {number|string}
+                     * @apioption annotations.labels.point.xAxis
                      */
 
                     /**
-                     * This number defines which yAxis the point is connected to.
-                     * It refers to either the axis id or the index of the axis
-                     * in the yAxis array. If the option is not configured or
-                     * the axis is not found the point's
-                     * y coordinate refers to the chart pixels.
+                     * This number defines which yAxis the point is connected to. It
+                     * refers to either the axis id or the index of the axis in the
+                     * yAxis array. If the option is not configured or the axis is not
+                     * found the point's y coordinate refers to the chart pixels.
                      *
-                     * @type {number|string}
-                     * @apioption annotations.crookedLine.labels.point.yAxis
+                     * @type      {number|string}
+                     * @apioption annotations.labels.point.yAxis
                      */
 
 
@@ -2883,90 +3015,106 @@
                      * multiple shapes, then can be added to the
                      * [shapeOptions](annotations.shapeOptions.html).
                      *
-                     * @type {Array<Object>}
-                     * @extends annotations.crookedLine.shapeOptions
-                     * @apioption annotations.crookedLine.shapes
+                     * @type      {Array<*>}
+                     * @extends   annotations.shapeOptions
+                     * @apioption annotations.shapes
                      */
 
                     /**
                      * This option defines the point to which the shape will be
-                     * connected.
-                     * It can be either the point which exists in the series - it is
-                     * referenced by the point's id - or a new point with defined x, y
-                     * properties and optionally axes.
+                     * connected. It can be either the point which exists in the
+                     * series - it is referenced by the point's id - or a new point with
+                     * defined x, y properties and optionally axes.
                      *
-                     * @type {string|MockPointOptions}
-                     * @extends annotations.crookedLine.labels.point
-                     * @apioption annotations.crookedLine.shapes.point
+                     * @type      {string|Highcharts.MockPointOptionsObject}
+                     * @extends   annotations.labels.point
+                     * @apioption annotations.shapes.point
                      */
 
                     /**
-                     * An array of points for the shape. This option is available
-                     * for shapes which can use multiple points such as path.
-                     * A point can be either a point object or a point's id.
+                     * An array of points for the shape. This option is available for
+                     * shapes which can use multiple points such as path. A point can be
+                     * either a point object or a point's id.
                      *
-                     * @type {Array<string|Highcharts.MockPoint.Options>}
                      * @see [annotations.shapes.point](annotations.shapes.point.html)
-                     * @apioption annotations.crookedLine.shapes.points
+                     *
+                     * @type      {Array<string|Highcharts.MockPointOptionsObject>}
+                     * @extends   annotations.labels.point
+                     * @apioption annotations.shapes.points
                      */
 
                     /**
-                     * Id of the marker which will be drawn at the final
-                     * vertex of the path.
-                     * Custom markers can be defined in defs property.
+                     * Id of the marker which will be drawn at the final vertex of the
+                     * path. Custom markers can be defined in defs property.
                      *
-                     * @type {string}
                      * @see [defs.markers](defs.markers.html)
+                     *
                      * @sample highcharts/annotations/custom-markers/
                      *         Define a custom marker for annotations
-                     * @apioption annotations.crookedLine.shapes.markerEnd
+                     *
+                     * @type      {string}
+                     * @apioption annotations.shapes.markerEnd
                      */
 
                     /**
-                     * Id of the marker which will be drawn at the first
-                     * vertex of the path.
-                     * Custom markers can be defined in defs property.
+                     * Id of the marker which will be drawn at the first vertex of the
+                     * path. Custom markers can be defined in defs property.
                      *
-                     * @type {string}
                      * @see [defs.markers](defs.markers.html)
+                     *
                      * @sample {highcharts} highcharts/annotations/custom-markers/
                      *         Define a custom marker for annotations
-                     * @apioption annotations.crookedLine.shapes.markerStart
+                     *
+                     * @type      {string}
+                     * @apioption annotations.shapes.markerStart
                      */
 
 
                     /**
-                     * Options for annotation's shapes. Each shape inherits options
-                     * from the shapeOptions object. An option from the shapeOptions
-                     * can be overwritten by config for a specific shape.
-                     *
-                     * @type {Object}
+                     * Options for annotation's shapes. Each shape inherits options from
+                     * the shapeOptions object. An option from the shapeOptions can be
+                     * overwritten by config for a specific shape.
                      */
                     shapeOptions: {
+
                         /**
                          * The width of the shape.
                          *
-                         * @type {number}
                          * @sample highcharts/annotations/shape/
                          *         Basic shape annotation
-                         * @apioption annotations.crookedLine.shapeOptions.width
+                         *
+                         * @type      {number}
+                         * @apioption annotations.shapeOptions.width
                          **/
 
                         /**
                          * The height of the shape.
                          *
-                         * @type {number}
                          * @sample highcharts/annotations/shape/
                          *         Basic shape annotation
-                         * @apioption annotations.crookedLine.shapeOptions.height
+                         *
+                         * @type      {number}
+                         * @apioption annotations.shapeOptions.height
+                         */
+
+                        /**
+                         * The type of the shape, e.g. circle or rectangle.
+                         *
+                         * @sample highcharts/annotations/shape/
+                         *         Basic shape annotation
+                         *
+                         * @type      {string}
+                         * @default   'rect'
+                         * @apioption annotations.shapeOptions.type
                          */
 
                         /**
                          * The color of the shape's stroke.
                          *
-                         * @type {Color}
                          * @sample highcharts/annotations/shape/
                          *         Basic shape annotation
+                         *
+                         * @type {Highcharts.ColorString}
                          */
                         stroke: 'rgba(0, 0, 0, 0.75)',
 
@@ -2981,21 +3129,12 @@
                         /**
                          * The color of the shape's fill.
                          *
-                         * @type {Color}
                          * @sample highcharts/annotations/shape/
                          *         Basic shape annotation
+                         *
+                         * @type {Highcharts.ColorString|Highcharts.GradientColorObject|Highcharts.PatternObject}
                          */
                         fill: 'rgba(0, 0, 0, 0.75)',
-
-                        /**
-                         * The type of the shape, e.g. circle or rectangle.
-                         *
-                         * @type {string}
-                         * @sample highcharts/annotations/shape/
-                         *         Basic shape annotation
-                         * @default 'rect'
-                         * @apioption annotations.crookedLine.shapeOptions.type
-                         */
 
                         /**
                          * The radius of the shape.
@@ -3018,10 +3157,16 @@
                      * Options from the controlPointOptions can be overwritten
                      * by options in a specific control point.
                      *
-                     * @type {Annotation.ControlPoint.Options}
-                     * @apioption annotations.crookedLine.controlPointOptions
+                     * @type      {Annotation.ControlPoint.Options}
+                     * @apioption annotations.controlPointOptions
                      */
                     controlPointOptions: {
+
+                        /**
+                         * @function {Annotation.ControlPoint.Positioner}
+                         * @apioption annotations.controlPointOptions.positioner
+                         */
+
                         symbol: 'circle',
                         width: 10,
                         height: 10,
@@ -3031,57 +3176,53 @@
                             fill: 'white'
                         },
                         visible: false,
-
-                        /**
-                         * @function {Annotation.ControlPoint.Positioner}
-                         * @apioption annotations.crookedLine.controlPointOptions.positioner
-                         */
-
-
                         events: {}
                     },
 
-
-                    /**
-                     * Events available in annotations.
-                     *
-                     * @type {Object}
-                     */
                     /**
                      * Event callback when annotation is added to the chart.
                      *
-                     * @since 7.1.0
-                     * @apioption annotations.crookedLine.events.add
+                     * @type      {Highcharts.EventCallbackFunction<Highcharts.Annotation>}
+                     * @since     7.1.0
+                     * @apioption annotations.events.add
                      */
+
                     /**
                      * Event callback when annotation is updated (e.g. drag and
                      * droppped or resized by control points).
                      *
-                     * @since 7.1.0
-                     * @apioption annotations.crookedLine.events.afterUpdate
+                     * @type      {Highcharts.EventCallbackFunction<Highcharts.Annotation>}
+                     * @since     7.1.0
+                     * @apioption annotations.events.afterUpdate
                      */
+
                     /**
                      * Event callback when annotation is removed from the chart.
                      *
-                     * @since 7.1.0
-                     * @apioption annotations.crookedLine.events.remove
+                     * @type      {Highcharts.EventCallbackFunction<Highcharts.Annotation>}
+                     * @since     7.1.0
+                     * @apioption annotations.events.remove
+                     */
+
+                    /**
+                     * Events available in annotations.
                      */
                     events: {},
 
                     /**
                      * The Z index of the annotation.
-                     *
-                     * @type {number}
-                     * @default 6
                      */
                     zIndex: 6
+
                 },
 
                 /**
                  * Initialize the annotation.
                  *
-                 * @param {Highcharts.Chart} - the chart
-                 * @param {Highcharts.AnnotationsOptions} - the user options for the annotation
+                 * @param {Highcharts.Chart}
+                 *        The chart
+                 * @param {Highcharts.AnnotationsOptions}
+                 *        The user options for the annotation
                  */
                 init: function () {
                     this.linkPoints();
@@ -3330,10 +3471,11 @@
                 },
 
                 /**
-                 * See {@link Highcharts.Annotation#destroy}.
+                 * See {@link Highcharts.Chart#removeAnnotation}.
                  */
                 remove: function () {
-                    return this.destroy();
+                    // Let chart.update() remove annoations on demand
+                    return this.chart.removeAnnotation(this);
                 },
 
                 update: function (userOptions) {
@@ -3369,7 +3511,7 @@
                  * Initialisation of a single shape
                  *
                  * @param {Object} shapeOptions - a confg object for a single shape
-                 **/
+                 */
                 initShape: function (shapeOptions, index) {
                     var options = merge(
                             this.options.shapeOptions,
@@ -3481,7 +3623,7 @@
                     item.destroy();
                 },
 
-                /*
+                /**
                  * @private
                  */
                 renderItem: function (item) {
@@ -3498,7 +3640,7 @@
          * An object uses for mapping between a shape type and a constructor.
          * To add a new shape type extend this object with type name as a key
          * and a constructor as its value.
-         **/
+         */
         Annotation.shapesMap = {
             'rect': ControllableRect,
             'circle': ControllableCircle,
@@ -3538,10 +3680,7 @@
          *
          ******************************************************************** */
 
-        // Let chart.update() work with annotations
-        H.Chart.prototype.collectionsWithUpdate.push('annotations');
-
-        H.extend(H.Chart.prototype, /** @lends Highcharts.Chart# */ {
+        H.extend(chartProto, /** @lends Highcharts.Chart# */ {
             initAnnotation: function (userOptions) {
                 var Constructor =
                     Annotation.types[userOptions.type] || Annotation,
@@ -3580,17 +3719,19 @@
             /**
              * Remove an annotation from the chart.
              *
-             * @param {String|Annotation} idOrAnnotation - The annotation's id or
+             * @param {String|Number|Annotation} idOrAnnotation - The annotation's id or
              *      direct annotation object.
              */
             removeAnnotation: function (idOrAnnotation) {
                 var annotations = this.annotations,
-                    annotation = isString(idOrAnnotation) ? find(
-                        annotations,
-                        function (annotation) {
-                            return annotation.options.id === idOrAnnotation;
-                        }
-                    ) : idOrAnnotation;
+                    annotation = idOrAnnotation.coll === 'annotations' ?
+                        idOrAnnotation :
+                        find(
+                            annotations,
+                            function (annotation) {
+                                return annotation.options.id === idOrAnnotation;
+                            }
+                        );
 
                 if (annotation) {
                     fireEvent(annotation, 'remove');
@@ -3609,8 +3750,13 @@
             }
         });
 
+        // Let chart.update() update annotations
+        chartProto.collectionsWithUpdate.push('annotations');
 
-        H.Chart.prototype.callbacks.push(function (chart) {
+        // Let chart.update() create annoations on demand
+        chartProto.collectionsWithInit.annotations = [chartProto.addAnnotation];
+
+        chartProto.callbacks.push(function (chart) {
             chart.annotations = [];
 
             if (!chart.options.annotations) {
@@ -3724,13 +3870,24 @@
             /**
              * A crooked line annotation.
              *
-             * @excluding labels, shapes
              * @sample highcharts/annotations-advanced/crooked-line/
              *         Crooked line
-             * @product highstock
+             *
+             * @product      highstock
              * @optionparent annotations.crookedLine
              */
             {
+
+                /**
+                 * @extends   annotations.labelOptions
+                 * @apioption annotations.crookedLine.labelOptions
+                 */
+
+                /**
+                 * @extends   annotations.shapeOptions
+                 * @apioption annotations.crookedLine.shapeOptions
+                 */
+
                 /**
                  * Additional options for an annotation with the type.
                  */
@@ -3749,24 +3906,26 @@
                     yAxis: 0,
 
                     /**
-                     * @type {Array<Object>}
+                     * @type      {Array<*>}
                      * @apioption annotations.crookedLine.typeOptions.points
                      */
 
                     /**
                      * The x position of the point.
-                     * @type {number}
+                     *
+                     * @type      {number}
                      * @apioption annotations.crookedLine.typeOptions.points.x
                      */
 
                     /**
                      * The y position of the point.
-                     * @type {number}
+                     *
+                     * @type      {number}
                      * @apioption annotations.crookedLine.typeOptions.points.y
                      */
 
                     /**
-                     * @type {number}
+                     * @type      {number}
                      * @excluding positioner, events
                      * @apioption annotations.crookedLine.typeOptions.points.controlPoint
                      */
@@ -3774,7 +3933,6 @@
                     /**
                      * Line options.
                      *
-                     * @type {Object}
                      * @excluding height, point, points, r, type, width
                      */
                     line: {
@@ -3867,22 +4025,23 @@
             /**
              * An elliott wave annotation.
              *
-             * @extends annotations.crookedLine
              * @sample highcharts/annotations-advanced/elliott-wave/
              *         Elliott wave
-             * @product highstock
+             *
+             * @extends      annotations.crookedLine
+             * @product      highstock
              * @optionparent annotations.elliottWave
              */
             {
                 typeOptions: {
+
                     /**
-                     * @type {Object}
-                     * @extends annotations.crookedLine.labelOptions
-                     * @apioption annotations.crookedLine.typeOptions.points.label
+                     * @extends   annotations.crookedLine.labelOptions
+                     * @apioption annotations.elliottWave.typeOptions.points.label
                      */
 
                     /**
-                     * @ignore
+                     * @ignore-options
                      */
                     labels: ['(0)', '(A)', '(B)', '(C)', '(D)', '(E)'],
                     line: {
@@ -4291,7 +4450,8 @@
         H.extendAnnotation(
             InfinityLine,
             CrookedLine,
-            /** @lends Annotation.InfinityLine# */{
+            /** @lends Annotation.InfinityLine# */
+            {
                 addShapes: function () {
                     var typeOptions = this.options.typeOptions,
                         points = [
@@ -4320,12 +4480,11 @@
         /**
          * An infinity line annotation.
          *
-         * @extends annotations.crookedLine
          * @sample highcharts/annotations-advanced/infinity-line/
          *         Infinity Line
          *
-         * @product highstock
-         *
+         * @extends   annotations.crookedLine
+         * @product   highstock
          * @apioption annotations.infinityLine
          */
 
@@ -4503,11 +4662,11 @@
             /**
              * A fibonacci annotation.
              *
-             * @extends annotations.crookedLine
              * @sample highcharts/annotations-advanced/fibonacci/
              *         Fibonacci
              *
-             * @product highstock
+             * @extends      annotations.crookedLine
+             * @product      highstock
              * @optionparent annotations.fibonacci
              */
             {
@@ -4520,16 +4679,16 @@
                     /**
                      * An array of background colors:
                      * Default to:
-                     * <pre>
-        [
-          'rgba(130, 170, 255, 0.4)',
-          'rgba(139, 191, 216, 0.4)',
-          'rgba(150, 216, 192, 0.4)',
-          'rgba(156, 229, 161, 0.4)',
-          'rgba(162, 241, 130, 0.4)',
-          'rgba(169, 255, 101, 0.4)'
-        ]
-                      </pre>
+                     * ```
+                     * [
+                     * 'rgba(130, 170, 255, 0.4)',
+                     * 'rgba(139, 191, 216, 0.4)',
+                     * 'rgba(150, 216, 192, 0.4)',
+                     * 'rgba(156, 229, 161, 0.4)',
+                     * 'rgba(162, 241, 130, 0.4)',
+                     * 'rgba(169, 255, 101, 0.4)'
+                     * ]
+                     * ```
                      */
                     backgroundColors: [
                         'rgba(130, 170, 255, 0.4)',
@@ -4553,8 +4712,8 @@
                     /**
                      * An array with options for the labels.
                      *
-                     * @type {Array<Object>}
-                     * @extends annotations.crookedLine.labelOptions
+                     * @type      {Array<object>}
+                     * @extends   annotations.crookedLine.labelOptions
                      * @apioption annotations.fibonacci.typeOptions.labels
                      */
                     labels: []
@@ -4748,10 +4907,11 @@
             /**
              * A pitchfork annotation.
              *
-             * @extends annotations.infinityLine
              * @sample highcharts/annotations-advanced/pitchfork/
              *         Pitchfork
-             * @product highstock
+             *
+             * @extends      annotations.infinityLine
+             * @product      highstock
              * @optionparent annotations.pitchfork
              */
             {
@@ -4759,7 +4919,7 @@
                     /**
                      * Inner background options.
                      *
-                     * @extends annotations.crookedLine.shapeOptions
+                     * @extends   annotations.crookedLine.shapeOptions
                      * @excluding height, r, type, width
                      */
                     innerBackground: {
@@ -4769,7 +4929,7 @@
                     /**
                      * Outer background options.
                      *
-                     * @extends annotations.crookedLine.shapeOptions
+                     * @extends   annotations.crookedLine.shapeOptions
                      * @excluding height, r, type, width
                      */
                     outerBackground: {
@@ -4793,7 +4953,7 @@
          * @class
          * @extends Annotation
          * @memberOf Highcharts
-         **/
+         */
         function VerticalLine() {
             H.Annotation.apply(this, arguments);
         }
@@ -4890,11 +5050,12 @@
             /**
              * A vertical line annotation.
              *
-             * @extends annotations.crookedLine
-             * @excluding labels, shapes, controlPointOptions
              * @sample highcharts/annotations-advanced/vertical-line/
              *         Vertical line
-             * @product highstock
+             *
+             * @extends      annotations.crookedLine
+             * @excluding    labels, shapes, controlPointOptions
+             * @product      highstock
              * @optionparent annotations.verticalLine
              */
             {
@@ -4926,7 +5087,7 @@
                     /**
                      * Connector options.
                      *
-                     * @extends annotations.crookedLine.shapeOptions
+                     * @extends   annotations.crookedLine.shapeOptions
                      * @excluding height, r, type, width
                      */
                     connector: {
@@ -4941,12 +5102,13 @@
 
         return VerticalLine;
     });
-    _registerModule(_modules, 'annotations/types/Measure.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'annotations/types/Measure.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+
+        var isNumber = U.isNumber;
 
         var Annotation = H.Annotation,
             ControlPoint = Annotation.ControlPoint,
-            merge = H.merge,
-            isNumber = H.isNumber;
+            merge = H.merge;
 
         /**
          * @class
@@ -4963,9 +5125,7 @@
             /** @lends Annotation.Measure# */
             {
                 /**
-                 *
                  * Init annotation object.
-                 *
                  */
                 init: function () {
                     Annotation.prototype.init.apply(this, arguments);
@@ -5064,22 +5224,16 @@
                 /**
                  * Add label with calculated values (min, max, average, bins).
                  *
-                 * @param {Boolean} resize - the flag for resize shape
-                 *
+                 * @param {boolean} resize - the flag for resize shape
                  */
                 addValues: function (resize) {
-                    var options = this.options.typeOptions,
-                        formatter = options.label.formatter,
-                        typeOptions = this.options.typeOptions,
-                        chart = this.chart,
-                        inverted = chart.options.chart.inverted,
-                        xAxis = chart.xAxis[typeOptions.xAxis],
-                        yAxis = chart.yAxis[typeOptions.yAxis];
+                    var typeOptions = this.options.typeOptions,
+                        formatter = typeOptions.label.formatter;
 
                     // set xAxisMin, xAxisMax, yAxisMin, yAxisMax
                     this.calculations.recalculate.call(this, resize);
 
-                    if (!options.label.enabled) {
+                    if (!typeOptions.label.enabled) {
                         return;
                     }
 
@@ -5100,6 +5254,10 @@
                             crop: true,
                             point: function (target) {
                                 var annotation = target.annotation,
+                                    chart = annotation.chart,
+                                    inverted = chart.inverted,
+                                    xAxis = chart.xAxis[typeOptions.xAxis],
+                                    yAxis = chart.yAxis[typeOptions.yAxis],
                                     top = chart.plotTop,
                                     left = chart.plotLeft;
 
@@ -5112,12 +5270,11 @@
                             },
                             text: (formatter && formatter.call(this)) ||
                                 this.calculations.defaultFormatter.call(this)
-                        }, options.label));
+                        }, typeOptions.label));
                     }
                 },
                 /**
-                 * add shapes - crosshair, background (rect)
-                 *
+                 * Crosshair, background (rect)
                  */
                 addShapes: function () {
                     this.addCrosshairs();
@@ -5149,7 +5306,7 @@
                         point = this.options.typeOptions.point,
                         xAxis = chart.xAxis[options.xAxis],
                         yAxis = chart.yAxis[options.yAxis],
-                        inverted = chart.options.chart.inverted,
+                        inverted = chart.inverted,
                         xAxisMin = xAxis.toPixels(this.xAxisMin),
                         xAxisMax = xAxis.toPixels(this.xAxisMax),
                         yAxisMin = yAxis.toPixels(this.yAxisMin),
@@ -5160,13 +5317,18 @@
                         },
                         pathH = [],
                         pathV = [],
-                        crosshairOptionsX, crosshairOptionsY;
+                        crosshairOptionsX,
+                        crosshairOptionsY,
+                        temp;
 
                     if (inverted) {
-                        xAxisMin = yAxis.toPixels(this.yAxisMin);
-                        xAxisMax = yAxis.toPixels(this.yAxisMax);
-                        yAxisMin = xAxis.toPixels(this.xAxisMin);
-                        yAxisMax = xAxis.toPixels(this.xAxisMax);
+                        temp = xAxisMin;
+                        xAxisMin = yAxisMin;
+                        yAxisMin = temp;
+
+                        temp = xAxisMax;
+                        xAxisMax = yAxisMax;
+                        yAxisMax = temp;
                     }
                     // horizontal line
                     if (options.crosshairX.enabled) {
@@ -5297,6 +5459,11 @@
                         this.calculations.updateStartPoints.call(this, true, false);
                     }
 
+                    // #11174 - clipBox was not recalculate during resize / redraw
+                    if (this.clipRect) {
+                        this.clipRect.animate(this.getClipBox());
+                    }
+
                     this.addValues(resize);
                     this.addCrosshairs();
                     this.redrawItems(this.shapes, animation);
@@ -5316,22 +5483,23 @@
                     this.options.typeOptions.point.y = this.startYMin;
                 },
                 calculations: {
-                    /*
-                    * Set starting points
-                    */
+                    /**
+                     * Set starting points
+                     * @private
+                     */
                     init: function () {
                         var options = this.options.typeOptions,
                             chart = this.chart,
                             getPointPos = this.calculations.getPointPos,
-                            inverted = chart.options.chart.inverted,
+                            inverted = chart.inverted,
                             xAxis = chart.xAxis[options.xAxis],
                             yAxis = chart.yAxis[options.yAxis],
                             bck = options.background,
                             width = inverted ? bck.height : bck.width,
                             height = inverted ? bck.width : bck.height,
                             selectType = options.selectType,
-                            top = chart.plotTop,
-                            left = chart.plotLeft;
+                            top = inverted ? chart.plotLeft : chart.plotTop,
+                            left = inverted ? chart.plotTop : chart.plotLeft;
 
                         this.startXMin = options.point.x;
                         this.startYMin = options.point.y;
@@ -5359,19 +5527,19 @@
                         // x / y selection type
                         if (selectType === 'x') {
                             this.startYMin = yAxis.toValue(top);
-                            this.startYMax = yAxis.toValue(top + chart.plotHeight);
+                            this.startYMax = yAxis.toValue(top + yAxis.len);
                         } else if (selectType === 'y') {
                             this.startXMin = xAxis.toValue(left);
-                            this.startXMax = xAxis.toValue(left + chart.plotWidth);
+                            this.startXMax = xAxis.toValue(left + xAxis.len);
                         }
 
                     },
-                    /*
-                    * Set current xAxisMin, xAxisMax, yAxisMin, yAxisMax.
-                    * Calculations of measure values (min, max, average, bins).
-                    *
-                    * @param {Boolean} resize - flag if shape is resized
-                    */
+                    /**
+                     * Set current xAxisMin, xAxisMax, yAxisMin, yAxisMax.
+                     * Calculations of measure values (min, max, average, bins).
+                     * @private
+                     * @param {Boolean} resize - flag if shape is resized
+                     */
                     recalculate: function (resize) {
                         var calc = this.calculations,
                             options = this.options.typeOptions,
@@ -5396,27 +5564,27 @@
                         }
 
                     },
-                    /*
-                    * Set current xAxisMin, xAxisMax, yAxisMin, yAxisMax.
-                    * Calculations of measure values (min, max, average, bins).
-                    *
-                    * @param {Object} axis - x or y axis reference
-                    * @param {Number} value - point's value (x or y)
-                    * @param {Number} offset - amount of pixels
-                    */
+                    /**
+                     * Set current xAxisMin, xAxisMax, yAxisMin, yAxisMax.
+                     * Calculations of measure values (min, max, average, bins).
+                     * @private
+                     * @param {Object} axis - x or y axis reference
+                     * @param {Number} value - point's value (x or y)
+                     * @param {Number} offset - amount of pixels
+                     */
                     getPointPos: function (axis, value, offset) {
                         return axis.toValue(
                             axis.toPixels(value) + offset
                         );
                     },
-                    /*
-                    * Update position of start points
-                    * (startXMin, startXMax, startYMin, startYMax)
-                    *
-                    * @param {Boolean} redraw - flag if shape is redraw
-                    * @param {Boolean} resize - flag if shape is resized
-                    * @param {Boolean} cpIndex - index of controlPoint
-                    */
+                    /**
+                     * Update position of start points
+                     * (startXMin, startXMax, startYMin, startYMax)
+                     * @private
+                     * @param {Boolean} redraw - flag if shape is redraw
+                     * @param {Boolean} resize - flag if shape is resized
+                     * @param {Boolean} cpIndex - index of controlPoint
+                     */
                     updateStartPoints: function (redraw, resize, cpIndex, dx, dy) {
                         var options = this.options.typeOptions,
                             selectType = options.selectType,
@@ -5459,19 +5627,21 @@
                             this.offsetY = 0;
                         }
                     },
-                    /*
-                    * Default formatter of label's content
-                    */
+                    /**
+                     * Default formatter of label's content
+                     * @private
+                     */
                     defaultFormatter: function () {
                         return 'Min: ' + this.min +
                             '<br>Max: ' + this.max +
                             '<br>Average: ' + this.average +
                             '<br>Bins: ' + this.bins;
                     },
-                    /*
-                    * Set values for xAxisMin, xAxisMax, yAxisMin, yAxisMax, also
-                    * when chart is inverted
-                    */
+                    /**
+                     * Set values for xAxisMin, xAxisMax, yAxisMin, yAxisMax, also
+                     * when chart is inverted
+                     * @private
+                     */
                     getExtremes: function (xAxisMin, xAxisMax, yAxisMin, yAxisMax) {
                         return {
                             xAxisMin: Math.min(xAxisMax, xAxisMin),
@@ -5480,9 +5650,10 @@
                             yAxisMax: Math.max(yAxisMax, yAxisMin)
                         };
                     },
-                    /*
-                    * Definitions of calculations (min, max, average, bins)
-                    */
+                    /**
+                     * Definitions of calculations (min, max, average, bins)
+                     * @private
+                     */
                     min: function () {
                         var min = Infinity,
                             series = this.chart.series,
@@ -5796,7 +5967,7 @@
                             typeOptions = options.typeOptions,
                             selectType = typeOptions.selectType,
                             controlPointOptions = options.controlPointOptions,
-                            inverted = chart.options.chart.inverted,
+                            inverted = chart.inverted,
                             xAxis = chart.xAxis[typeOptions.xAxis],
                             yAxis = chart.yAxis[typeOptions.yAxis],
                             targetX = target.xAxisMax,
@@ -5871,21 +6042,23 @@
     });
     _registerModule(_modules, 'mixins/navigation.js', [], function () {
         /**
-         * (c) 2010-2018 Paweł Fus
          *
-         * License: www.highcharts.com/license
-         */
-
-
+         *  (c) 2010-2018 Paweł Fus
+         *
+         *  License: www.highcharts.com/license
+         *
+         *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
+         *
+         * */
         var chartNavigation = {
             /**
              * Initializes `chart.navigation` object which delegates `update()` methods
              * to all other common classes (used in exporting and navigationBindings).
              *
              * @private
-             *
              * @param {Highcharts.Chart} chart
              *        The chart instance.
+             * @return {void}
              */
             initUpdate: function (chart) {
                 if (!chart.navigation) {
@@ -5893,11 +6066,7 @@
                         updates: [],
                         update: function (options, redraw) {
                             this.updates.forEach(function (updateConfig) {
-                                updateConfig.update.call(
-                                    updateConfig.context,
-                                    options,
-                                    redraw
-                                );
+                                updateConfig.update.call(updateConfig.context, options, redraw);
                             });
                         }
                     };
@@ -5907,19 +6076,17 @@
              * Registers an `update()` method in the `chart.navigation` object.
              *
              * @private
-             *
-             * @param {function} update
+             * @param {Highcharts.ChartNavigationUpdateFunction} update
              *        The `update()` method that will be called in `chart.update()`.
-             *
              * @param {Highcharts.Chart} chart
              *        The chart instance. `update()` will use that as a context
              *        (`this`).
+             * @return {void}
              */
             addUpdate: function (update, chart) {
                 if (!chart.navigation) {
                     this.initUpdate(chart);
                 }
-
                 chart.navigation.updates.push({
                     update: update,
                     context: chart
@@ -5927,15 +6094,23 @@
             }
         };
 
-
         return chartNavigation;
     });
-    _registerModule(_modules, 'annotations/navigationBindings.js', [_modules['parts/Globals.js'], _modules['mixins/navigation.js']], function (H, chartNavigationMixin) {
-        /**
-         * (c) 2009-2017 Highsoft, Black Label
+    _registerModule(_modules, 'annotations/navigationBindings.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js'], _modules['mixins/navigation.js']], function (H, U, chartNavigationMixin) {
+        /* *
          *
-         * License: www.highcharts.com/license
-         */
+         *  (c) 2009-2017 Highsoft, Black Label
+         *
+         *  License: www.highcharts.com/license
+         *
+         * */
+
+        var attr = U.attr,
+            isArray = U.isArray,
+            isNumber = U.isNumber,
+            isObject = U.isObject,
+            objectEach = U.objectEach;
+
 
         var doc = H.doc,
             win = H.win,
@@ -5943,11 +6118,7 @@
             pick = H.pick,
             merge = H.merge,
             extend = H.extend,
-            isNumber = H.isNumber,
             fireEvent = H.fireEvent,
-            isArray = H.isArray,
-            isObject = H.isObject,
-            objectEach = H.objectEach,
             PREFIX = 'highcharts-';
 
         // IE 9-11 polyfill for Element.closest():
@@ -5993,17 +6164,17 @@
              *        Annotation to be updated
              */
             updateRectSize: function (event, annotation) {
-                var options = annotation.options.typeOptions,
-                    x = this.chart.xAxis[0].toValue(event.chartX),
-                    y = this.chart.yAxis[0].toValue(event.chartY),
-                    width = x - options.point.x,
-                    height = options.point.y - y;
+                var chart = annotation.chart,
+                    options = annotation.options.typeOptions,
+                    coords = chart.pointer.getCoordinates(event),
+                    width = coords.xAxis[0].value - options.point.x,
+                    height = options.point.y - coords.yAxis[0].value;
 
                 annotation.update({
                     typeOptions: {
                         background: {
-                            width: width,
-                            height: height
+                            width: chart.inverted ? height : width,
+                            height: chart.inverted ? width : height
                         }
                     }
                 });
@@ -6148,13 +6319,15 @@
                 });
 
                 objectEach(options.events || {}, function (callback, eventName) {
-                    navigation.eventsToUnbind.push(
-                        addEvent(
-                            navigation,
-                            eventName,
-                            callback
-                        )
-                    );
+                    if (H.isFunction(callback)) {
+                        navigation.eventsToUnbind.push(
+                            addEvent(
+                                navigation,
+                                eventName,
+                                callback
+                            )
+                        );
+                    }
                 });
 
                 navigation.eventsToUnbind.push(
@@ -6612,7 +6785,7 @@
                     elemClassName;
 
                 while (element) {
-                    elemClassName = H.attr(element, 'class');
+                    elemClassName = attr(element, 'class');
                     if (elemClassName) {
                         classNames = classNames.concat(
                             elemClassName.split(' ').map(
@@ -6731,6 +6904,12 @@
             this.selectedButtonElement = null;
         });
 
+        addEvent(H.Annotation, 'remove', function () {
+            if (this.chart.navigationBindings) {
+                this.chart.navigationBindings.deselectAnnotation();
+            }
+        });
+
 
         // Show edit-annotation form:
         function selectableAnnotation(annotationType) {
@@ -6811,7 +6990,7 @@
             selectableAnnotation(H.Annotation);
 
             // Advanced annotations:
-            H.objectEach(H.Annotation.types, function (annotationType) {
+            objectEach(H.Annotation.types, function (annotationType) {
                 selectableAnnotation(annotationType);
             });
         }
@@ -6910,77 +7089,80 @@
                      * `steps` array.
                      *
                      * @type    {Highcharts.StockToolsBindingsObject}
-                     * @default {"className": "highcharts-circle-annotation", "start": function() {}, "steps": [function() {}], "annotationOptions": {}}
+                     * @default {"className": "highcharts-circle-annotation", "start": function() {}, "steps": [function() {}], "annotationsOptions": {}}
                      */
                     circleAnnotation: {
                         /** @ignore */
                         className: 'highcharts-circle-annotation',
                         /** @ignore */
                         start: function (e) {
-                            var x = this.chart.xAxis[0].toValue(e.chartX),
-                                y = this.chart.yAxis[0].toValue(e.chartY),
-                                type = 'circle',
+                            var coords = this.chart.pointer.getCoordinates(e),
                                 navigation = this.chart.options.navigation,
-                                bindings = navigation && navigation.bindings,
-                                annotation;
+                                controlPoints = [{
+                                    positioner: function (target) {
+                                        var xy = H.Annotation.MockPoint
+                                                .pointToPixels(
+                                                    target.points[0]
+                                                ),
+                                            r = target.options.r;
 
-                            annotation = this.chart.addAnnotation(merge({
-                                langKey: 'circle',
-                                shapes: [{
-                                    type: type,
-                                    point: {
-                                        xAxis: 0,
-                                        yAxis: 0,
-                                        x: x,
-                                        y: y
+                                        return {
+                                            x: xy.x + r * Math.cos(Math.PI / 4) -
+                                                this.graphic.width / 2,
+                                            y: xy.y + r * Math.sin(Math.PI / 4) -
+                                                this.graphic.height / 2
+                                        };
                                     },
-                                    r: 5,
-                                    controlPoints: [{
-                                        positioner: function (target) {
-                                            var xy = H.Annotation.MockPoint
-                                                    .pointToPixels(
-                                                        target.points[0]
-                                                    ),
-                                                r = target.options.r;
+                                    events: {
+                                        // TRANSFORM RADIUS ACCORDING TO Y
+                                        // TRANSLATION
+                                        drag: function (e, target) {
+                                            var annotation = target.annotation,
+                                                position = this
+                                                    .mouseMoveToTranslation(e);
 
-                                            return {
-                                                x: xy.x + r * Math.cos(Math.PI / 4) -
-                                                    this.graphic.width / 2,
-                                                y: xy.y + r * Math.sin(Math.PI / 4) -
-                                                    this.graphic.height / 2
-                                            };
-                                        },
-                                        events: {
-                                            // TRANSFORM RADIUS ACCORDING TO Y
-                                            // TRANSLATION
-                                            drag: function (e, target) {
-                                                var annotation = target.annotation,
-                                                    position = this
-                                                        .mouseMoveToTranslation(e);
+                                            target.setRadius(
+                                                Math.max(
+                                                    target.options.r +
+                                                        position.y /
+                                                        Math.sin(Math.PI / 4),
+                                                    5
+                                                )
+                                            );
 
-                                                target.setRadius(
-                                                    Math.max(
-                                                        target.options.r +
-                                                            position.y /
-                                                            Math.sin(Math.PI / 4),
-                                                        5
-                                                    )
-                                                );
+                                            annotation.options.shapes[0] =
+                                                annotation.userOptions.shapes[0] =
+                                                target.options;
 
-                                                annotation.options.shapes[0] =
-                                                    annotation.userOptions.shapes[0] =
-                                                    target.options;
-
-                                                target.redraw(false);
-                                            }
+                                            target.redraw(false);
                                         }
-                                    }]
-                                }]
-                            },
-                            navigation.annotationsOptions,
-                            bindings[type] && bindings[type].annotationsOptions));
+                                    }
+                                }];
 
-                            return annotation;
+                            return this.chart.addAnnotation(
+                                merge(
+                                    {
+                                        langKey: 'circle',
+                                        shapes: [{
+                                            type: 'circle',
+                                            point: {
+                                                xAxis: 0,
+                                                yAxis: 0,
+                                                x: coords.xAxis[0].value,
+                                                y: coords.yAxis[0].value
+                                            },
+                                            r: 5,
+                                            controlPoints: controlPoints
+                                        }]
+                                    },
+                                    navigation
+                                        .annotationsOptions,
+                                    navigation
+                                        .bindings
+                                        .circleAnnotation
+                                        .annotationsOptions
+                                )
+                            );
                         },
                         /** @ignore */
                         steps: [
@@ -6988,10 +7170,17 @@
                                 var point = annotation.options.shapes[0].point,
                                     x = this.chart.xAxis[0].toPixels(point.x),
                                     y = this.chart.yAxis[0].toPixels(point.y),
+                                    inverted = this.chart.inverted,
                                     distance = Math.max(
                                         Math.sqrt(
-                                            Math.pow(x - e.chartX, 2) +
-                                            Math.pow(y - e.chartY, 2)
+                                            Math.pow(
+                                                inverted ? y - e.chartX : x - e.chartX,
+                                                2
+                                            ) +
+                                            Math.pow(
+                                                inverted ? x - e.chartY : y - e.chartY,
+                                                2
+                                            )
                                         ),
                                         5
                                     );
@@ -7009,92 +7198,111 @@
                      * in `steps` array.
                      *
                      * @type    {Highcharts.StockToolsBindingsObject}
-                     * @default {"className": "highcharts-rectangle-annotation", "start": function() {}, "steps": [function() {}], "annotationOptions": {}}
+                     * @default {"className": "highcharts-rectangle-annotation", "start": function() {}, "steps": [function() {}], "annotationsOptions": {}}
                      */
                     rectangleAnnotation: {
                         /** @ignore */
                         className: 'highcharts-rectangle-annotation',
                         /** @ignore */
                         start: function (e) {
-                            var x = this.chart.xAxis[0].toValue(e.chartX),
-                                y = this.chart.yAxis[0].toValue(e.chartY),
-                                type = 'rect',
+                            var coords = this.chart.pointer.getCoordinates(e),
                                 navigation = this.chart.options.navigation,
-                                bindings = navigation && navigation.bindings;
+                                x = coords.xAxis[0].value,
+                                y = coords.yAxis[0].value,
+                                controlPoints = [{
+                                    positioner: function (annotation) {
+                                        var xy = H.Annotation.MockPoint
+                                            .pointToPixels(
+                                                annotation.shapes[0].points[2]
+                                            );
 
-                            return this.chart.addAnnotation(merge({
-                                langKey: 'rectangle',
-                                shapes: [{
-                                    type: type,
-                                    point: {
-                                        x: x,
-                                        y: y,
-                                        xAxis: 0,
-                                        yAxis: 0
+                                        return {
+                                            x: xy.x - 4,
+                                            y: xy.y - 4
+                                        };
                                     },
-                                    width: 5,
-                                    height: 5,
+                                    events: {
+                                        drag: function (e, target) {
+                                            var coords = this.chart.pointer
+                                                    .getCoordinates(e),
+                                                x = coords.xAxis[0].value,
+                                                y = coords.yAxis[0].value,
+                                                shape = target.options.shapes[0],
+                                                points = shape.points;
 
-                                    controlPoints: [{
-                                        positioner: function (target) {
-                                            var xy = H.Annotation.MockPoint
-                                                .pointToPixels(
-                                                    target.points[0]
-                                                );
+                                            // Top right point
+                                            points[1].x = x;
+                                            // Bottom right point (cursor position)
+                                            points[2].x = x;
+                                            points[2].y = y;
+                                            // Bottom left
+                                            points[3].y = y;
 
-                                            return {
-                                                x: xy.x + target.options.width - 4,
-                                                y: xy.y + target.options.height - 4
-                                            };
-                                        },
-                                        events: {
-                                            drag: function (e, target) {
-                                                var annotation = target.annotation,
-                                                    xy = this
-                                                        .mouseMoveToTranslation(e);
+                                            target.options.shapes[0].points = points;
 
-                                                target.options.width = Math.max(
-                                                    target.options.width + xy.x,
-                                                    5
-                                                );
-                                                target.options.height = Math.max(
-                                                    target.options.height + xy.y,
-                                                    5
-                                                );
-
-                                                annotation.options.shapes[0] =
-                                                    target.options;
-                                                annotation.userOptions.shapes[0] =
-                                                    target.options;
-
-                                                target.redraw(false);
-                                            }
+                                            target.redraw(false);
                                         }
-                                    }]
-                                }]
-                            },
-                            navigation.annotationsOptions,
-                            bindings[type] && bindings[type].annotationsOptions));
+                                    }
+                                }];
+
+                            return this.chart.addAnnotation(
+                                merge(
+                                    {
+                                        langKey: 'rectangle',
+                                        shapes: [{
+                                            type: 'path',
+                                            points: [{
+                                                xAxis: 0,
+                                                yAxis: 0,
+                                                x: x,
+                                                y: y
+                                            }, {
+                                                xAxis: 0,
+                                                yAxis: 0,
+                                                x: x,
+                                                y: y
+                                            }, {
+                                                xAxis: 0,
+                                                yAxis: 0,
+                                                x: x,
+                                                y: y
+                                            }, {
+                                                xAxis: 0,
+                                                yAxis: 0,
+                                                x: x,
+                                                y: y
+                                            }]
+                                        }],
+                                        controlPoints: controlPoints
+                                    },
+                                    navigation
+                                        .annotationsOptions,
+                                    navigation
+                                        .bindings
+                                        .rectangleAnnotation
+                                        .annotationsOptions
+                                )
+                            );
                         },
                         /** @ignore */
                         steps: [
                             function (e, annotation) {
-                                var xAxis = this.chart.xAxis[0],
-                                    yAxis = this.chart.yAxis[0],
-                                    point = annotation.options.shapes[0].point,
-                                    x = xAxis.toPixels(point.x),
-                                    y = yAxis.toPixels(point.y),
-                                    width = Math.max(e.chartX - x, 5),
-                                    height = Math.max(e.chartY - y, 5);
+                                var points = annotation.options.shapes[0].points,
+                                    coords = this.chart.pointer.getCoordinates(e),
+                                    x = coords.xAxis[0].value,
+                                    y = coords.yAxis[0].value;
+
+                                // Top right point
+                                points[1].x = x;
+                                // Bottom right point (cursor position)
+                                points[2].x = x;
+                                points[2].y = y;
+                                // Bottom left
+                                points[3].y = y;
 
                                 annotation.update({
                                     shapes: [{
-                                        width: width,
-                                        height: height,
-                                        point: {
-                                            x: point.x,
-                                            y: point.y
-                                        }
+                                        points: points
                                     }]
                                 });
                             }
@@ -7104,107 +7312,122 @@
                      * A label annotation bindings. Includes `start` event only.
                      *
                      * @type    {Highcharts.StockToolsBindingsObject}
-                     * @default {"className": "highcharts-label-annotation", "start": function() {}, "steps": [function() {}], "annotationOptions": {}}
+                     * @default {"className": "highcharts-label-annotation", "start": function() {}, "steps": [function() {}], "annotationsOptions": {}}
                      */
                     labelAnnotation: {
                         /** @ignore */
                         className: 'highcharts-label-annotation',
                         /** @ignore */
                         start: function (e) {
-                            var x = this.chart.xAxis[0].toValue(e.chartX),
-                                y = this.chart.yAxis[0].toValue(e.chartY),
-                                type = 'label',
+                            var coords = this.chart.pointer.getCoordinates(e),
                                 navigation = this.chart.options.navigation,
-                                bindings = navigation && navigation.bindings;
+                                controlPoints = [{
+                                    symbol: 'triangle-down',
+                                    positioner: function (target) {
+                                        if (!target.graphic.placed) {
+                                            return {
+                                                x: 0,
+                                                y: -9e7
+                                            };
+                                        }
 
-                            this.chart.addAnnotation(merge({
-                                langKey: 'label',
-                                labelOptions: {
-                                    format: '{y:.2f}'
-                                },
-                                labels: [{
-                                    point: {
-                                        x: x,
-                                        y: y,
-                                        xAxis: 0,
-                                        yAxis: 0
+                                        var xy = H.Annotation.MockPoint
+                                            .pointToPixels(
+                                                target.points[0]
+                                            );
+
+                                        return {
+                                            x: xy.x - this.graphic.width / 2,
+                                            y: xy.y - this.graphic.height / 2
+                                        };
                                     },
-                                    controlPoints: [{
-                                        symbol: 'triangle-down',
-                                        positioner: function (target) {
-                                            if (!target.graphic.placed) {
-                                                return {
-                                                    x: 0,
-                                                    y: -9e7
-                                                };
-                                            }
 
-                                            var xy = H.Annotation.MockPoint
-                                                .pointToPixels(
-                                                    target.points[0]
-                                                );
+                                    // TRANSLATE POINT/ANCHOR
+                                    events: {
+                                        drag: function (e, target) {
+                                            var xy = this.mouseMoveToTranslation(e);
 
-                                            return {
-                                                x: xy.x - this.graphic.width / 2,
-                                                y: xy.y - this.graphic.height / 2
-                                            };
-                                        },
+                                            target.translatePoint(xy.x, xy.y);
 
-                                        // TRANSLATE POINT/ANCHOR
-                                        events: {
-                                            drag: function (e, target) {
-                                                var xy = this.mouseMoveToTranslation(e);
+                                            target.annotation.labels[0].options =
+                                                target.options;
 
-                                                target.translatePoint(xy.x, xy.y);
-
-                                                target.annotation.labels[0].options =
-                                                    target.options;
-
-                                                target.redraw(false);
-                                            }
+                                            target.redraw(false);
                                         }
-                                    }, {
-                                        symbol: 'square',
-                                        positioner: function (target) {
-                                            if (!target.graphic.placed) {
-                                                return {
-                                                    x: 0,
-                                                    y: -9e7
-                                                };
-                                            }
-
+                                    }
+                                }, {
+                                    symbol: 'square',
+                                    positioner: function (target) {
+                                        if (!target.graphic.placed) {
                                             return {
-                                                x: target.graphic.alignAttr.x -
-                                                    this.graphic.width / 2,
-                                                y: target.graphic.alignAttr.y -
-                                                    this.graphic.height / 2
+                                                x: 0,
+                                                y: -9e7
                                             };
-                                        },
-
-                                        // TRANSLATE POSITION WITHOUT CHANGING THE
-                                        // ANCHOR
-                                        events: {
-                                            drag: function (e, target) {
-                                                var xy = this.mouseMoveToTranslation(e);
-
-                                                target.translate(xy.x, xy.y);
-
-                                                target.annotation.labels[0].options =
-                                                    target.options;
-
-                                                target.redraw(false);
-                                            }
                                         }
-                                    }],
-                                    overflow: 'none',
-                                    crop: true
-                                }]
-                            },
-                            navigation.annotationsOptions,
-                            bindings[type] && bindings[type].annotationsOptions));
+
+                                        return {
+                                            x: target.graphic.alignAttr.x -
+                                                this.graphic.width / 2,
+                                            y: target.graphic.alignAttr.y -
+                                                this.graphic.height / 2
+                                        };
+                                    },
+
+                                    // TRANSLATE POSITION WITHOUT CHANGING THE
+                                    // ANCHOR
+                                    events: {
+                                        drag: function (e, target) {
+                                            var xy = this.mouseMoveToTranslation(e);
+
+                                            target.translate(xy.x, xy.y);
+
+                                            target.annotation.labels[0].options =
+                                                target.options;
+
+                                            target.redraw(false);
+                                        }
+                                    }
+                                }];
+
+                            return this.chart.addAnnotation(
+                                merge(
+                                    {
+                                        langKey: 'label',
+                                        labelOptions: {
+                                            format: '{y:.2f}'
+                                        },
+                                        labels: [{
+                                            point: {
+                                                xAxis: 0,
+                                                yAxis: 0,
+                                                x: coords.xAxis[0].value,
+                                                y: coords.yAxis[0].value
+                                            },
+                                            overflow: 'none',
+                                            crop: true,
+                                            controlPoints: controlPoints
+                                        }]
+                                    },
+                                    navigation
+                                        .annotationsOptions,
+                                    navigation
+                                        .bindings
+                                        .labelAnnotation
+                                        .annotationsOptions
+                                )
+                            );
                         }
                     }
                 },
+                /**
+                 * Path where Highcharts will look for icons. Change this to use
+                 * icons from a different server.
+                 *
+                 * @since     7.1.3
+                 * @default   https://code.highcharts.com/7.2.0/gfx/stock-icons/
+                 * @apioption navigation.iconsURL
+                 */
+
                 /**
                  * A `showPopup` event. Fired when selecting for example an annotation.
                  *
@@ -7268,23 +7491,27 @@
         });
 
     });
-    _registerModule(_modules, 'annotations/popup.js', [_modules['parts/Globals.js']], function (H) {
-        /**
-         * Popup generator for Stock tools
+    _registerModule(_modules, 'annotations/popup.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+        /* *
          *
-         * (c) 2009-2017 Sebastian Bochan
+         *  Popup generator for Stock tools
          *
-         * License: www.highcharts.com/license
-         */
+         *  (c) 2009-2017 Sebastian Bochan
+         *
+         *  License: www.highcharts.com/license
+         *
+         * */
+
+        var defined = U.defined,
+            isArray = U.isArray,
+            isObject = U.isObject,
+            isString = U.isString,
+            objectEach = U.objectEach;
 
         var addEvent = H.addEvent,
             createElement = H.createElement,
-            objectEach = H.objectEach,
             pick = H.pick,
             wrap = H.wrap,
-            isString = H.isString,
-            isObject = H.isObject,
-            isArray = H.isArray,
             indexFilter = /\d/g,
             PREFIX = 'highcharts-',
             DIV = 'div',
@@ -7313,20 +7540,19 @@
             }
         });
 
-        H.Popup = function (parentDiv) {
-            this.init(parentDiv);
+        H.Popup = function (parentDiv, iconsURL) {
+            this.init(parentDiv, iconsURL);
         };
 
         H.Popup.prototype = {
-            /*
+            /**
              * Initialize the popup. Create base div and add close button.
-             *
+             * @private
              * @param {HTMLDOMElement} - container where popup should be placed
-             *
+             * @param {Object} - user options
              * @return {HTMLDOMElement} - return created popup's div
-             *
              */
-            init: function (parentDiv) {
+            init: function (parentDiv, iconsURL) {
 
                 // create popup div
                 this.container = createElement(DIV, {
@@ -7334,13 +7560,14 @@
                 }, null, parentDiv);
 
                 this.lang = this.getLangpack();
+                this.iconsURL = iconsURL;
 
                 // add close button
                 this.addCloseBtn();
             },
-            /*
+            /**
              * Create HTML element and attach click event (close popup).
-             *
+             * @private
              */
             addCloseBtn: function () {
                 var _self = this,
@@ -7351,19 +7578,20 @@
                     className: PREFIX + 'popup-close'
                 }, null, this.container);
 
+                closeBtn.style['background-image'] = 'url(' +
+                        this.iconsURL + 'close.svg)';
+
                 ['click', 'touchstart'].forEach(function (eventName) {
                     addEvent(closeBtn, eventName, function () {
                         _self.closePopup();
                     });
                 });
             },
-            /*
+            /**
              * Create two columns (divs) in HTML.
-             *
+             * @private
              * @param {HTMLDOMElement} - container of columns
-             *
              * @return {Object} - reference to two HTML columns
-             *
              */
             addColsContainer: function (container) {
                 var rhsCol,
@@ -7389,15 +7617,14 @@
                     rhsCol: rhsCol
                 };
             },
-            /*
+            /**
              * Create input with label.
-             *
+             * @private
              * @param {String} - chain of fields i.e params.styles.fontSize
              * @param {String} - indicator type
              * @param {HTMLDOMElement} - container where elements should be added
              * @param {String} - dafault value of input i.e period value is 14,
              * extracted from defaultOptions (ADD mode) or series options (EDIT mode)
-             *
              */
             addInput: function (option, type, parentDiv, value) {
                 var optionParamList = option.split('.'),
@@ -7430,15 +7657,14 @@
                     parentDiv
                 ).setAttribute(PREFIX + 'data-name', option);
             },
-            /*
+            /**
              * Create button.
-             *
+             * @private
              * @param {HTMLDOMElement} - container where elements should be added
              * @param {String} - text placed as button label
              * @param {String} - add | edit | remove
              * @param {Function} - on click callback
              * @param {HTMLDOMElement} - container where inputs are generated
-             *
              * @return {HTMLDOMElement} - html button
              */
             addButton: function (parentDiv, label, type, callback, fieldsDiv) {
@@ -7463,12 +7689,11 @@
 
                 return button;
             },
-            /*
+            /**
              * Get values from all inputs and create JSON.
-             *
+             * @private
              * @param {HTMLDOMElement} - container where inputs are created
              * @param {String} - add | edit | remove
-             *
              * @return {Object} - fields
              */
             getFields: function (parentDiv, type) {
@@ -7510,12 +7735,11 @@
 
                 return fieldsOutput;
             },
-            /*
+            /**
              * Reset content of the current popup and show.
-             *
+             * @private
              * @param {Chart} - chart
              * @param {Function} - on click callback
-             *
              * @return {Object} - fields
              */
             showPopup: function () {
@@ -7540,21 +7764,20 @@
                 popupDiv.appendChild(popupCloseBtn);
                 popupDiv.style.display = 'block';
             },
-            /*
+            /**
              * Hide popup.
-             *
+             * @private
              */
             closePopup: function () {
                 this.popup.container.style.display = 'none';
             },
-            /*
+            /**
              * Create content and show popup.
-             *
+             * @private
              * @param {String} - type of popup i.e indicators
              * @param {Chart} - chart
              * @param {Object} - options
              * @param {Function} - on click callback
-             *
              */
             showForm: function (type, chart, options, callback) {
 
@@ -7583,23 +7806,22 @@
                     this.annotations.addForm.call(this, chart, options, callback, true);
                 }
             },
-            /*
+            /**
              * Return lang definitions for popup.
-             *
+             * @private
              * @return {Object} - elements translations.
              */
             getLangpack: function () {
                 return H.getOptions().lang.navigation.popup;
             },
             annotations: {
-                /*
+                /**
                  * Create annotation simple form. It contains two buttons
                  * (edit / remove) and text label.
-                 *
+                 * @private
                  * @param {Chart} - chart
                  * @param {Object} - options
                  * @param {Function} - on click callback
-                 *
                  */
                 addToolbar: function (chart, options, callback) {
                     var _self = this,
@@ -7637,6 +7859,8 @@
                     );
 
                     button.className += ' ' + PREFIX + 'annotation-remove-button';
+                    button.style['background-image'] = 'url(' +
+                        this.iconsURL + 'destroy.svg)';
 
                     button = this.addButton(
                         popupDiv,
@@ -7655,16 +7879,18 @@
                     );
 
                     button.className += ' ' + PREFIX + 'annotation-edit-button';
+                    button.style['background-image'] = 'url(' +
+                        this.iconsURL + 'edit.svg)';
+
                 },
-                /*
+                /**
                  * Create annotation simple form.
                  * It contains fields with param names.
-                 *
+                 * @private
                  * @param {Chart} - chart
                  * @param {Object} - options
                  * @param {Function} - on click callback
                  * @param {Boolean} - if it is a form declared for init annotation
-                 *
                  */
                 addForm: function (chart, options, callback, isInit) {
                     var popupDiv = this.popup.container,
@@ -7707,16 +7933,15 @@
                         popupDiv
                     );
                 },
-                /*
+                /**
                  * Create annotation's form fields.
-                 *
+                 * @private
                  * @param {HTMLDOMElement} - div where inputs are placed
                  * @param {Chart} - chart
                  * @param {String} - name of parent to create chain of names
                  * @param {Object} - options
                  * @param {Array} - storage - array where all items are stored
                  * @param {Boolean} - isRoot - recursive flag for root
-                 *
                  */
                 addFormFields: function (
                     parentDiv,
@@ -7796,14 +8021,13 @@
                 }
             },
             indicators: {
-                /*
+                /**
                  * Create indicator's form. It contains two tabs (ADD and EDIT) with
                  * content.
-                 *
+                 * @private
                  * @param {Chart} - chart
                  * @param {Object} - options
                  * @param {Function} - on click callback
-                 *
                  */
                 addForm: function (chart, options, callback) {
 
@@ -7866,14 +8090,13 @@
                         buttonParentDiv
                     );
                 },
-                /*
+                /**
                  * Create HTML list of all indicators (ADD mode) or added indicators
                  * (EDIT mode).
-                 *
+                 * @private
                  * @param {Chart} - chart
                  * @param {HTMLDOMElement} - container where list is added
                  * @param {String} - 'edit' or 'add' mode
-                 *
                  */
                 addIndicatorList: function (chart, parentDiv, listType) {
                     var _self = this,
@@ -7947,15 +8170,13 @@
                         indicatorList.childNodes[0].click();
                     }
                 },
-                /*
+                /**
                  * Extract full name and type of requested indicator.
-                 *
+                 * @private
                  * @param {Series} - series which name is needed.
                  * (EDIT mode - defaultOptions.series, ADD mode - indicator series).
                  * @param {String} - indicator type like: sma, ema, etc.
-                 *
                  * @return {Object} - series name and type like: sma, ema, etc.
-                 *
                  */
                 getNameType: function (series, type) {
                     var options = series.options,
@@ -7976,17 +8197,24 @@
                         type: seriesType
                     };
                 },
-                /*
+                /**
                  * List all series with unique ID. Its mandatory for indicators to set
                  * correct linking.
-                 *
+                 * @private
                  * @param {String} - indicator type like: sma, ema, etc.
                  * @param {String} - type of select i.e series or volume.
                  * @param {Chart} - chart
                  * @param {HTMLDOMElement} - element where created HTML list is added
-                 *
+                 * @param {String} selectedOption
+                 *         optional param for default value in dropdown
                  */
-                listAllSeries: function (type, optionName, chart, parentDiv) {
+                listAllSeries: function (
+                    type,
+                    optionName,
+                    chart,
+                    parentDiv,
+                    selectedOption
+                ) {
                     var selectName = PREFIX + optionName + '-type-' + type,
                         lang = this.lang,
                         selectBox,
@@ -8035,19 +8263,22 @@
                             );
                         }
                     });
+
+                    if (defined(selectedOption)) {
+                        selectBox.value = selectedOption;
+                    }
                 },
-                /*
+                /**
                  * Create typical inputs for chosen indicator. Fields are extracted from
                  * defaultOptions (ADD mode) or current indicator (ADD mode). Two extra
                  * fields are added:
                  * - hidden input - contains indicator type (required for callback)
                  * - select - list of series which can be linked with indicator
-                 *
+                 * @private
                  * @param {Chart} - chart
                  * @param {Series} - indicator
                  * @param {String} - indicator type like: sma, ema, etc.
                  * @param {HTMLDOMElement} - element where created HTML list is added
-                 *
                  */
                 addFormFields: function (chart, series, seriesType, rhsColWrapper) {
                     var fields = series.params || series.options.params,
@@ -8085,7 +8316,8 @@
                         seriesType,
                         'series',
                         chart,
-                        rhsColWrapper
+                        rhsColWrapper,
+                        series.linkedParent && fields.volumeSeriesID
                     );
 
                     if (fields.volumeSeriesID) {
@@ -8094,7 +8326,8 @@
                             seriesType,
                             'volume',
                             chart,
-                            rhsColWrapper
+                            rhsColWrapper,
+                            series.linkedParent && series.linkedParent.options.id
                         );
                     }
 
@@ -8108,17 +8341,16 @@
                         rhsColWrapper
                     );
                 },
-                /*
+                /**
                  * Recurent function which lists all fields, from params object and
                  * create them as inputs. Each input has unique `data-name` attribute,
                  * which keeps chain of fields i.e params.styles.fontSize.
-                 *
+                 * @private
                  * @param {Chart} - chart
                  * @param {String} - name of parent to create chain of names
                  * @param {Series} - fields - params which are based for input create
                  * @param {String} - indicator type like: sma, ema, etc.
                  * @param {HTMLDOMElement} - element where created HTML list is added
-                 *
                  */
                 addParamInputs: function (chart, parentNode, fields, type, parentDiv) {
                     var _self = this,
@@ -8153,9 +8385,9 @@
                         }
                     });
                 },
-                /*
+                /**
                  * Get amount of indicators added to chart.
-                 *
+                 * @private
                  * @return {Number} - Amount of indicators
                  */
                 getAmount: function () {
@@ -8177,11 +8409,10 @@
                 }
             },
             tabs: {
-                /*
+                /**
                  * Init tabs. Create tab menu items, tabs containers
-                 *
+                 * @private
                  * @param {Chart} - reference to current chart
-                 *
                  */
                 init: function (chart) {
                     var tabs = this.tabs,
@@ -8201,12 +8432,11 @@
                     // activate first tab
                     tabs.selectTab.call(this, firstTab, 0);
                 },
-                /*
+                /**
                  * Create tab menu item
-                 *
+                 * @private
                  * @param {String} - `add` or `edit`
                  * @param {Number} - Disable tab when 0
-                 *
                  * @return {HTMLDOMElement} - created HTML tab-menu element
                  */
                 addMenuItem: function (tabName, disableTab) {
@@ -8234,11 +8464,10 @@
 
                     return menuItem;
                 },
-                /*
+                /**
                  * Create tab content
-                 *
+                 * @private
                  * @return {HTMLDOMElement} - created HTML tab-content element
-                 *
                  */
                 addContentItem: function () {
                     var popupDiv = this.popup.container;
@@ -8252,11 +8481,10 @@
                         popupDiv
                     );
                 },
-                /*
+                /**
                  * Add click event to each tab
-                 *
+                 * @private
                  * @param {Number} - Disable tab when 0
-                 *
                  */
                 switchTabs: function (disableTab) {
                     var _self = this,
@@ -8282,12 +8510,11 @@
                         });
                     });
                 },
-                /*
+                /**
                  * Set tab as visible
-                 *
+                 * @private
                  * @param {HTMLDOMElement} - current tab
                  * @param {Number} - Index of tab in menu
-                 *
                  */
                 selectTab: function (tab, index) {
                     var allTabs = this.popup.container
@@ -8296,9 +8523,9 @@
                     tab.className += ' ' + PREFIX + 'tab-item-active';
                     allTabs[index].className += ' ' + PREFIX + 'tab-item-show';
                 },
-                /*
+                /**
                  * Set all tabs as invisible.
-                 *
+                 * @private
                  */
                 deselectAll: function () {
                     var popupDiv = this.popup.container,
@@ -8319,7 +8546,16 @@
         addEvent(H.NavigationBindings, 'showPopup', function (config) {
             if (!this.popup) {
                 // Add popup to main container
-                this.popup = new H.Popup(this.chart.container);
+                this.popup = new H.Popup(
+                    this.chart.container, (
+                        this.chart.options.navigation.iconsURL ||
+                        (
+                            this.chart.options.stockTools &&
+                            this.chart.options.stockTools.gui.iconsURL
+                        ) ||
+                        'https://code.highcharts.com/7.2.0/gfx/stock-icons/'
+                    )
+                );
             }
 
             this.popup.showForm(

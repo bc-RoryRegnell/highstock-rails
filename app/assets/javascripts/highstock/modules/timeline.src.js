@@ -1,5 +1,5 @@
 /**
- * @license  Highcharts JS v7.1.1 (2019-04-09)
+ * @license Highcharts JS v7.2.0 (2019-09-03)
  *
  * Timeline series
  *
@@ -29,7 +29,7 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'modules/timeline.src.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'modules/timeline.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
         /* *
          *
          *  Timeline Series.
@@ -44,12 +44,14 @@
 
 
 
+        var defined = U.defined,
+            isNumber = U.isNumber,
+            objectEach = U.objectEach;
+
         var addEvent = H.addEvent,
-            defined = H.defined,
             LegendSymbolMixin = H.LegendSymbolMixin,
             TrackerMixin = H.TrackerMixin,
             merge = H.merge,
-            isNumber = H.isNumber,
             pick = H.pick,
             Point = H.Point,
             Series = H.Series,
@@ -203,7 +205,8 @@
                     lineWidth: 2,
                     height: 15
                 },
-                showInLegend: false
+                showInLegend: false,
+                colorKey: 'x'
             },
             /**
              * @lends Highcharts.Series#
@@ -224,10 +227,10 @@
                             closestPointRangePx = Number.MAX_VALUE;
 
                         series.points.forEach(function (point) {
-                            // Set the isInside parameter basing on the real point
+                            // Set the isInside parameter basing also on the real point
                             // visibility, in order to avoid showing hidden points
                             // in drawPoints method.
-                            point.isInside = point.visible;
+                            point.isInside = point.isInside && point.visible;
 
                             // New way of calculating closestPointRangePx value, which
                             // respects the real point visibility is needed.
@@ -283,9 +286,18 @@
                                     dataLabel.targetPosition = {};
                                 }
 
-                                return !point.connector ?
-                                    point.drawConnector() :
-                                    point.alignConnector();
+                                return point.drawConnector();
+                            }
+                        });
+                    });
+                    addEvent(series.chart, 'afterHideOverlappingLabels', function () {
+                        series.points.forEach(function (p) {
+                            if (
+                                p.connector &&
+                                p.dataLabel &&
+                                p.dataLabel.oldOpacity !== p.dataLabel.newOpacity
+                            ) {
+                                p.alignConnector();
                             }
                         });
                     });
@@ -554,7 +566,8 @@
                             y2: isNumber(targetDLPos.y) ? targetDLPos.y : dl.y
                         },
                         negativeDistance = (
-                            dl.alignAttr[direction[0]] < point.series.yAxis.len / 2
+                            (dl.alignAttr || dl)[direction[0]] <
+                                point.series.yAxis.len / 2
                         ),
                         path;
 
@@ -575,8 +588,8 @@
                     }
 
                     // Change coordinates so that they will be relative to data label.
-                    H.objectEach(coords, function (_coord, i) {
-                        coords[i] -= dl.alignAttr[i[0]];
+                    objectEach(coords, function (_coord, i) {
+                        coords[i] -= (dl.alignAttr || dl)[i[0]];
                     });
 
                     path = chart.renderer.crispLine([
@@ -594,14 +607,20 @@
                     var point = this,
                         series = point.series;
 
-                    point.connector = series.chart.renderer
-                        .path(point.getConnectorPath())
-                        .attr({
-                            zIndex: -1
-                        })
-                        .add(point.dataLabel);
+                    if (!point.connector) {
+                        point.connector = series.chart.renderer
+                            .path(point.getConnectorPath())
+                            .attr({
+                                zIndex: -1
+                            })
+                            .add(point.dataLabel);
+                    }
 
-                    point.alignConnector();
+                    if (point.series.chart.isInsidePlot( // #10507
+                        point.dataLabel.x, point.dataLabel.y
+                    )) {
+                        point.alignConnector();
+                    }
                 },
                 alignConnector: function () {
                     var point = this,
@@ -640,7 +659,9 @@
                         connector.attr({
                             stroke: dlOptions.connectorColor || point.color,
                             'stroke-width': dlOptions.connectorWidth,
-                            opacity: point.dataLabel.opacity
+                            opacity: dl[
+                                defined(dl.newOpacity) ? 'newOpacity' : 'opacity'
+                            ]
                         });
                     }
                 }

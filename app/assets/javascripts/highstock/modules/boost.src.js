@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v7.1.1 (2019-04-09)
+ * @license Highcharts JS v7.2.0 (2019-09-03)
  *
  * Boost module
  *
@@ -7,6 +7,67 @@
  * Author: Torstein Honsi
  *
  * License: www.highcharts.com/license
+ *
+ * This is a Highcharts module that draws long data series on a canvas in order
+ * to increase performance of the initial load time and tooltip responsiveness.
+ *
+ * Compatible with WebGL compatible browsers (not IE < 11).
+ *
+ * If this module is taken in as part of the core
+ * - All the loading logic should be merged with core. Update styles in the
+ *   core.
+ * - Most of the method wraps should probably be added directly in parent
+ *   methods.
+ *
+ * Notes for boost mode
+ * - Area lines are not drawn
+ * - Lines are not drawn on scatter charts
+ * - Zones and negativeColor don't work
+ * - Dash styles are not rendered on lines.
+ * - Columns are always one pixel wide. Don't set the threshold too low.
+ * - Disable animations
+ * - Marker shapes are not supported: markers will always be circles
+ *
+ * Optimizing tips for users
+ * - Set extremes (min, max) explicitly on the axes in order for Highcharts to
+ *   avoid computing extremes.
+ * - Set enableMouseTracking to false on the series to improve total rendering
+ *      time.
+ * - The default threshold is set based on one series. If you have multiple,
+ *   dense series, the combined number of points drawn gets higher, and you may
+ *   want to set the threshold lower in order to use optimizations.
+ * - If drawing large scatter charts, it's beneficial to set the marker radius
+ *   to a value less than 1. This is to add additional spacing to make the chart
+ *   more readable.
+ * - If the value increments on both the X and Y axis aren't small, consider
+ *   setting useGPUTranslations to true on the boost settings object. If you do
+ *   this and the increments are small (e.g. datetime axis with small time
+ *   increments) it may cause rendering issues due to floating point rounding
+ *   errors, so your millage may vary.
+ *
+ * Settings
+ *    There are two ways of setting the boost threshold:
+ *    - Per series: boost based on number of points in individual series
+ *    - Per chart: boost based on the number of series
+ *
+ *  To set the series boost threshold, set seriesBoostThreshold on the chart
+ *  object.
+ *  To set the series-specific threshold, set boostThreshold on the series
+ *  object.
+ *
+ *  In addition, the following can be set in the boost object:
+ *  {
+ *      //Wether or not to use alpha blending
+ *      useAlpha: boolean - default: true
+ *      //Set to true to perform translations on the GPU.
+ *      //Much faster, but may cause rendering issues
+ *      //when using values far from 0 due to floating point
+ *      //rounding issues
+ *      useGPUTranslations: boolean - default: false
+ *      //Use pre-allocated buffers, much faster,
+ *      //but may cause rendering issues with some data sets
+ *      usePreallocated: boolean - default: false
+ *  }
  */
 'use strict';
 (function (factory) {
@@ -334,8 +395,9 @@
                 // Texture uniform
                 uSamplerUniform;
 
-            /*
+            /**
              * Handle errors accumulated in errors stack
+             * @private
              */
             function handleErrors() {
                 if (errors.length) {
@@ -343,7 +405,9 @@
                 }
             }
 
-            /* String to shader program
+            /**
+             * String to shader program
+             * @private
              * @param {string} str - the program source
              * @param {string} type - the program type: either `vertex` or `fragment`
              * @returns {bool|shader}
@@ -368,9 +432,10 @@
                 return shader;
             }
 
-            /*
+            /**
              * Create the shader.
              * Loads the shader program statically defined above
+             * @private
              */
             function createShader() {
                 var v = stringToProgram(vertShade, 'vertex'),
@@ -418,8 +483,9 @@
                 return true;
             }
 
-            /*
+            /**
              * Destroy the shader
+             * @private
              */
             function destroy() {
                 if (gl && shaderProgram) {
@@ -428,10 +494,11 @@
                 }
             }
 
-            /*
+            /**
              * Bind the shader.
              * This makes the shader the active one until another one is bound,
              * or until 0 is bound.
+             * @private
              */
             function bind() {
                 if (gl && shaderProgram) {
@@ -439,9 +506,10 @@
                 }
             }
 
-            /*
+            /**
              * Set a uniform value.
              * This uses a hash map to cache uniform locations.
+             * @private
              * @param name {string} - the name of the uniform to set
              * @param val {float} - the value to set
              */
@@ -457,8 +525,9 @@
                 }
             }
 
-            /*
+            /**
              * Set the active texture
+             * @private
              * @param texture - the texture
              */
             function setTexture(texture) {
@@ -467,8 +536,9 @@
                 }
             }
 
-            /*
+            /**
              * Set if inversion state
+             * @private
              * @flag is the state
              */
             function setInverted(flag) {
@@ -477,8 +547,9 @@
                 }
             }
 
-            /*
+            /**
              * Enable/disable circle drawing
+             * @private
              */
             function setDrawAsCircle(flag) {
                 if (gl && shaderProgram) {
@@ -486,8 +557,9 @@
                 }
             }
 
-            /*
+            /**
              * Flush
+             * @private
              */
             function reset() {
                 if (gl && shaderProgram) {
@@ -496,8 +568,9 @@
                 }
             }
 
-            /*
+            /**
              * Set bubble uniforms
+             * @private
              * @param series {Highcharts.Series} - the series to use
              */
             function setBubbleUniforms(series, zCalcMin, zCalcMax) {
@@ -536,8 +609,9 @@
                 }
             }
 
-            /*
+            /**
              * Set the Color uniform.
+             * @private
              * @param color {Array<float>} - an array with RGBA values
              */
             function setColor(color) {
@@ -552,8 +626,9 @@
                 }
             }
 
-            /*
+            /**
              * Set skip translation
+             * @private
              */
             function setSkipTranslation(flag) {
                 if (gl && shaderProgram) {
@@ -561,8 +636,9 @@
                 }
             }
 
-            /*
+            /**
              * Set the perspective matrix
+             * @private
              * @param m {Matrix4x4} - the matrix
              */
             function setPMatrix(m) {
@@ -571,8 +647,9 @@
                 }
             }
 
-            /*
+            /**
              * Set the point size.
+             * @private
              * @param p {float} - point size
              */
             function setPointSize(p) {
@@ -581,8 +658,9 @@
                 }
             }
 
-            /*
+            /**
              * Get the shader program handle
+             * @private
              * @returns {GLInt} - the handle for the program
              */
             function getProgram() {
@@ -676,8 +754,9 @@
                 data = [];
             }
 
-            /*
+            /**
              * Build the buffer
+             * @private
              * @param dataIn {Array<float>} - a 0 padded array of indices
              * @param attrib {String} - the name of the Attribute to bind the buffer to
              * @param dataComponents {Integer} - the number of components per. indice
@@ -721,8 +800,9 @@
                 return true;
             }
 
-            /*
+            /**
              * Bind the buffer
+             * @private
              */
             function bind() {
                 if (!buffer) {
@@ -738,8 +818,9 @@
                 // gl.enableVertexAttribArray(vertAttribute);
             }
 
-            /*
+            /**
              * Render the buffer
+             * @private
              * @param from {Integer} - the start indice
              * @param to {Integer} - the end indice
              * @param drawMode {String} - the draw mode
@@ -783,9 +864,10 @@
                 }
             }
 
-            /*
+            /**
              * Note about pre-allocated buffers:
              *     - This is slower for charts with many series
+             * @private
              */
             function allocate(size) {
                 size *= 4;
@@ -809,7 +891,7 @@
 
         return GLVertexBuffer;
     });
-    _registerModule(_modules, 'modules/boost/wgl-renderer.js', [_modules['modules/boost/wgl-shader.js'], _modules['modules/boost/wgl-vbuffer.js'], _modules['parts/Globals.js']], function (GLShader, GLVertexBuffer, H) {
+    _registerModule(_modules, 'modules/boost/wgl-renderer.js', [_modules['modules/boost/wgl-shader.js'], _modules['modules/boost/wgl-vbuffer.js'], _modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (GLShader, GLVertexBuffer, H, U) {
         /**
          *
          * Copyright (c) 2019-2019 Highsoft AS
@@ -823,11 +905,13 @@
 
 
 
+        var isNumber = U.isNumber;
+
+
         var win = H.win,
             doc = win.document,
             merge = H.merge,
             objEach = H.objEach,
-            isNumber = H.isNumber,
             some = H.some,
             Color = H.Color,
             pick = H.pick;
@@ -968,8 +1052,9 @@
                 vbuffer.allocate(s);
             }
 
-            /*
+            /**
              * Returns an orthographic perspective matrix
+             * @private
              * @param {number} width - the width of the viewport in pixels
              * @param {number} height - the height of the viewport in pixels
              */
@@ -985,25 +1070,28 @@
                 ];
             }
 
-            /*
+            /**
              * Clear the depth and color buffer
+             * @private
              */
             function clear() {
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             }
 
-            /*
+            /**
              * Get the WebGL context
+             * @private
              * @returns {WebGLContext} - the context
              */
             function getGL() {
                 return gl;
             }
 
-            /*
+            /**
              * Push data for a single series
              * This calculates additional vertices and transforms the data to be
              * aligned correctly in memory
+             * @private
              */
             function pushSeriesData(series, inst) {
                 var isRange = series.pointArrayMap &&
@@ -1074,10 +1162,16 @@
                     firstPoint = true,
                     zones = options.zones || false,
                     zoneDefColor = false,
-                    threshold = options.threshold;
+                    threshold = options.threshold,
+                    gapSize = false;
 
                 if (options.boostData && options.boostData.length > 0) {
                     return;
+                }
+
+                if (options.gapSize) {
+                    gapSize = options.gapUnit !== 'value' ?
+                        options.gapSize * series.closestPointRange : options.gapSize;
                 }
 
                 if (zones) {
@@ -1427,6 +1521,10 @@
                         continue;
                     }
 
+                    if (gapSize && x - px > gapSize) {
+                        beginSegment();
+                    }
+
                     // Note: Boost requires that zones are sorted!
                     if (zones) {
                         pcolor = zoneDefColor.rgba;
@@ -1630,9 +1728,10 @@
                 closeSegment();
             }
 
-            /*
+            /**
              * Push a series to the renderer
              * If we render the series immediatly, we don't have to loop later
+             * @private
              * @param s {Highchart.Series} - the series to push
              */
             function pushSeries(s) {
@@ -1685,10 +1784,11 @@
                 }
             }
 
-            /*
+            /**
              * Flush the renderer.
              * This removes pushed series and vertices.
              * Should be called after clearing and before rendering
+             * @private
              */
             function flush() {
                 series = [];
@@ -1700,8 +1800,9 @@
                 }
             }
 
-            /*
+            /**
              * Pass x-axis to shader
+             * @private
              * @param axis {Highcharts.Axis} - the x-axis
              */
             function setXAxis(axis) {
@@ -1720,8 +1821,9 @@
                 shader.setUniform('xAxisReversed', !!axis.reversed);
             }
 
-            /*
+            /**
              * Pass y-axis to shader
+             * @private
              * @param axis {Highcharts.Axis} - the y-axis
              */
             function setYAxis(axis) {
@@ -1740,8 +1842,9 @@
                 shader.setUniform('yAxisReversed', !!axis.reversed);
             }
 
-            /*
+            /**
              * Set the translation threshold
+             * @private
              * @param has {boolean} - has threshold flag
              * @param translation {Float} - the threshold
              */
@@ -1750,9 +1853,10 @@
                 shader.setUniform('translatedThreshold', translation);
             }
 
-            /*
+            /**
              * Render the data
              * This renders all pushed series.
+             * @private
              */
             function render(chart) {
 
@@ -1971,8 +2075,9 @@
                 flush();
             }
 
-            /*
+            /**
              * Render the data when ready
+             * @private
              */
             function renderWhenReady(chart) {
                 clear();
@@ -1990,9 +2095,10 @@
                 }
             }
 
-            /*
+            /**
              * Set the viewport size in pixels
              * Creates an orthographic perspective matrix and applies it.
+             * @private
              * @param w {Integer} - the width of the viewport
              * @param h {Integer} - the height of the viewport
              */
@@ -2009,8 +2115,9 @@
                 shader.setPMatrix(orthoMatrix(width, height));
             }
 
-            /*
+            /**
              * Init OpenGL
+             * @private
              * @param canvas {HTMLCanvas} - the canvas to render to
              */
             function init(canvas, noFlush) {
@@ -2188,16 +2295,18 @@
                 return true;
             }
 
-            /*
+            /**
              * Check if we have a valid OGL context
+             * @private
              * @returns {Boolean} - true if the context is valid
              */
             function valid() {
                 return gl !== false;
             }
 
-            /*
+            /**
              * Check if the renderer has been initialized
+             * @private
              * @returns {Boolean} - true if it has, false if not
              */
             function inited() {
@@ -2878,6 +2987,12 @@
                     // If we're rendering per. series we should create the marker groups
                     // as usual.
                     if (!chart.isChartSeriesBoosting()) {
+                        // If all series were boosting, but are not anymore
+                        // restore private markerGroup
+                        if (this.markerGroup === chart.markerGroup) {
+                            this.markerGroup = undefined;
+                        }
+
                         this.markerGroup = series.plotGroup(
                             'markerGroup',
                             'markers',
@@ -2886,6 +3001,14 @@
                             chart.seriesGroup
                         );
                     } else {
+                        // If series has a private markeGroup, remove that
+                        // and use common markerGroup
+                        if (
+                            this.markerGroup &&
+                            this.markerGroup !== chart.markerGroup
+                        ) {
+                            this.markerGroup.destroy();
+                        }
                         // Use a single group for the markers
                         this.markerGroup = chart.markerGroup;
 
@@ -3128,7 +3251,7 @@
 
         return init;
     });
-    _registerModule(_modules, 'modules/boost/boost-overrides.js', [_modules['parts/Globals.js'], _modules['modules/boost/boost-utils.js'], _modules['modules/boost/boostables.js'], _modules['modules/boost/boostable-map.js']], function (H, butils, boostable, boostableMap) {
+    _registerModule(_modules, 'modules/boost/boost-overrides.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js'], _modules['modules/boost/boost-utils.js'], _modules['modules/boost/boostables.js'], _modules['modules/boost/boostable-map.js']], function (H, U, butils, boostable, boostableMap) {
         /* *
          *
          *  Copyright (c) 2019-2019 Highsoft AS
@@ -3141,6 +3264,9 @@
 
 
 
+        var isNumber = U.isNumber;
+
+
 
         var boostEnabled = butils.boostEnabled,
             shouldForceChartSeriesBoosting = butils.shouldForceChartSeriesBoosting,
@@ -3149,7 +3275,6 @@
             Point = H.Point,
             seriesTypes = H.seriesTypes,
             addEvent = H.addEvent,
-            isNumber = H.isNumber,
             pick = H.pick,
             wrap = H.wrap,
             plotOptions = H.getOptions().plotOptions;
@@ -3474,7 +3599,7 @@
                 this.alteredByBoost.push({
                     prop: prop,
                     val: this[prop],
-                    own: this.hasOwnProperty(prop)
+                    own: Object.hasOwnProperty.call(this, prop)
                 });
             }, this);
 
@@ -3528,11 +3653,21 @@
             var options = this.options,
                 data = options.data,
                 xAxis = this.xAxis && this.xAxis.options,
-                yAxis = this.yAxis && this.yAxis.options;
+                yAxis = this.yAxis && this.yAxis.options,
+                colorAxis = this.colorAxis && this.colorAxis.options;
 
             return data.length > (options.boostThreshold || Number.MAX_VALUE) &&
-                    isNumber(yAxis.min) && isNumber(yAxis.max) &&
-                    (!checkX || (isNumber(xAxis.min) && isNumber(xAxis.max)));
+                    // Defined yAxis extremes
+                    isNumber(yAxis.min) &&
+                    isNumber(yAxis.max) &&
+                    // Defined (and required) xAxis extremes
+                    (!checkX ||
+                        (isNumber(xAxis.min) && isNumber(xAxis.max))
+                    ) &&
+                    // Defined (e.g. heatmap) colorAxis extremes
+                    (!colorAxis ||
+                        (isNumber(colorAxis.min) && isNumber(colorAxis.max))
+                    );
         };
 
         /**
@@ -3773,6 +3908,52 @@
 
     });
     _registerModule(_modules, 'masters/modules/boost.src.js', [], function () {
+
+
+        /* *
+         * Options for the Boost module. The Boost module allows certain series types
+         * to be rendered by WebGL instead of the default SVG. This allows hundreds of
+         * thousands of data points to be rendered in milliseconds. In addition to the
+         * WebGL rendering it saves time by skipping processing and inspection of the
+         * data wherever possible. This introduces some limitations to what features are
+         * available in boost mode. See [the docs](
+         * https://www.highcharts.com/docs/advanced-chart-features/boost-module) for
+         * details.
+         *
+         * In addition to the global `boost` option, each series has a
+         * [boostThreshold](#plotOptions.series.boostThreshold) that defines when the
+         * boost should kick in.
+         *
+         * Requires the `modules/boost.js` module.
+         *
+         * @sample {highstock} highcharts/boost/line-series-heavy-stock
+         *         Stock chart
+         * @sample {highstock} highcharts/boost/line-series-heavy-dynamic
+         *         Dynamic stock chart
+         * @sample highcharts/boost/line
+         *         Line chart
+         * @sample highcharts/boost/line-series-heavy
+         *         Line chart with hundreds of series
+         * @sample highcharts/boost/scatter
+         *         Scatter chart
+         * @sample highcharts/boost/area
+         *         Area chart
+         * @sample highcharts/boost/arearange
+         *         Area range chart
+         * @sample highcharts/boost/column
+         *         Column chart
+         * @sample highcharts/boost/columnrange
+         *         Column range chart
+         * @sample highcharts/boost/bubble
+         *         Bubble chart
+         * @sample highcharts/boost/heatmap
+         *         Heat map
+         * @sample highcharts/boost/treemap
+         *         Tree map
+         *
+         * @product   highcharts highstock
+         * @apioption boost
+         * */
 
 
     });

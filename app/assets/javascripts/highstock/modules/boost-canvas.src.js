@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v7.1.1 (2019-04-09)
+ * @license Highcharts JS v7.2.0 (2019-09-03)
  *
  * Boost module
  *
@@ -29,7 +29,7 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'modules/boost-canvas.src.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'modules/boost-canvas.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
         /* *
          * License: www.highcharts.com/license
          * Author: Torstein Honsi, Christer Vasseng
@@ -43,6 +43,9 @@
 
 
 
+        var isNumber = U.isNumber;
+
+
         var win = H.win,
             doc = win.document,
             noop = function () {},
@@ -52,7 +55,6 @@
             extend = H.extend,
             addEvent = H.addEvent,
             fireEvent = H.fireEvent,
-            isNumber = H.isNumber,
             merge = H.merge,
             pick = H.pick,
             wrap = H.wrap,

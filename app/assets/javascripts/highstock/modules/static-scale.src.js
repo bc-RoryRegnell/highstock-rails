@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v7.1.1 (2019-04-09)
+ * @license Highcharts Gantt JS v7.2.0 (2019-09-03)
  *
  * StaticScale
  *
@@ -28,7 +28,7 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'modules/static-scale.src.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'modules/static-scale.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
         /* *
          * (c) 2016-2019 Torstein Honsi, Lars Cabrera
          *
@@ -36,6 +36,9 @@
          */
 
 
+
+        var defined = U.defined,
+            isNumber = U.isNumber;
 
         var Chart = H.Chart,
             pick = H.pick;
@@ -58,10 +61,17 @@
          */
 
         H.addEvent(H.Axis, 'afterSetOptions', function () {
+            var chartOptions = this.chart.options && this.chart.options.chart;
             if (
                 !this.horiz &&
-                H.isNumber(this.options.staticScale) &&
-                !this.chart.options.chart.height
+                isNumber(this.options.staticScale) &&
+                (
+                    !chartOptions.height ||
+                    (
+                        chartOptions.scrollablePlotArea &&
+                        chartOptions.scrollablePlotArea.minHeight
+                    )
+                )
             ) {
                 this.staticScale = this.options.staticScale;
             }
@@ -76,7 +86,7 @@
                         height,
                         diff;
 
-                    if (axis.staticScale && H.defined(axis.min)) {
+                    if (axis.staticScale && defined(axis.min)) {
                         height = pick(
                             axis.unitLength,
                             axis.max + axis.tickInterval - axis.min

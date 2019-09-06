@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v7.1.1 (2019-04-09)
+ * @license Highcharts JS v7.2.0 (2019-09-03)
  *
  * (c) 2009-2019 Torstein Honsi
  *
@@ -26,8 +26,8 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'modules/series-label.src.js', [_modules['parts/Globals.js']], function (H) {
-        /**
+    _registerModule(_modules, 'modules/series-label.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+        /* *
          * (c) 2009-2019 Torstein Honsi
          *
          * License: www.highcharts.com/license
@@ -67,10 +67,12 @@
 
 
 
+        var isNumber = U.isNumber;
+
+
         var labelDistance = 3,
             addEvent = H.addEvent,
             extend = H.extend,
-            isNumber = H.isNumber,
             pick = H.pick,
             Series = H.Series,
             SVGRenderer = H.SVGRenderer,
@@ -731,11 +733,16 @@
                     points = series.interpolatedPoints,
                     onArea = pick(labelOptions.onArea, !!series.area),
                     label = series.labelBySeries,
+                    isNew = !label,
                     minFontSize = labelOptions.minFontSize,
                     maxFontSize = labelOptions.maxFontSize,
                     dataExtremes,
                     areaMin,
-                    areaMax;
+                    areaMax,
+                    colorClass = 'highcharts-color-' + pick(
+                        series.colorIndex,
+                        'none'
+                    );
 
                 // Stay within the area data bounds (#10038)
                 if (onArea && !inverted) {
@@ -776,13 +783,17 @@
                             .addClass(
                                 'highcharts-series-label ' +
                                 'highcharts-series-label-' + series.index + ' ' +
-                                (series.options.className || '')
-                            )
-                            .css(extend({
+                                (series.options.className || '') +
+                                colorClass
+                            );
+
+                        if (!chart.renderer.styledMode) {
+                            label.css(extend({
                                 color: onArea ?
                                     chart.renderer.getContrast(series.color) :
                                     series.color
                             }, series.options.label.style));
+                        }
 
                         // Adapt label sizes to the sum of the data
                         if (minFontSize && maxFontSize) {
@@ -799,8 +810,7 @@
                                 'stroke-width': 1,
                                 zIndex: 3
                             })
-                            .add()
-                            .animate({ opacity: 1 }, { duration: 200 });
+                            .add();
                     }
 
                     bBox = label.getBBox();
@@ -960,7 +970,18 @@
                                     anchorY: best.connectorPoint &&
                                         best.connectorPoint.plotY + paneTop
                                 }))
-                                .animate(anim);
+                                .animate(
+                                    anim,
+                                    isNew ?
+                                        // Default initial animation to a fraction of
+                                        // the series animation (#9396)
+                                        H.animObject(
+                                            series.options.animation
+                                        ).duration * 0.2 :
+                                        // On updating, default to the general chart
+                                        // animation
+                                        chart.renderer.globalAnimation
+                                );
 
                             // Record closest point to stick to for sync redraw
                             series.options.kdNow = true;
@@ -999,10 +1020,7 @@
         function drawLabels(e) {
 
             var chart = this,
-                delay = Math.max(
-                    H.animObject(chart.renderer.globalAnimation).duration,
-                    250
-                );
+                delay = H.animObject(chart.renderer.globalAnimation).duration;
 
             chart.labelSeries = [];
             chart.labelSeriesMaxSum = 0;
