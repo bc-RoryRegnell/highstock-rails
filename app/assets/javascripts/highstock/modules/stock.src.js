@@ -1,5 +1,5 @@
 /**
- * @license Highstock JS v7.2.0 (2019-09-03)
+ * @license Highstock JS v8.0.0 (2019-12-10)
  *
  * Highstock as a plugin for Highcharts
  *
@@ -38,8 +38,8 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var defined = U.defined;
-        var addEvent = H.addEvent, Axis = H.Axis, correctFloat = H.correctFloat, defaultOptions = H.defaultOptions, destroyObjectProperties = H.destroyObjectProperties, fireEvent = H.fireEvent, hasTouch = H.hasTouch, isTouchDevice = H.isTouchDevice, merge = H.merge, pick = H.pick, removeEvent = H.removeEvent, swapXY;
+        var correctFloat = U.correctFloat, defined = U.defined, destroyObjectProperties = U.destroyObjectProperties, pick = U.pick;
+        var addEvent = H.addEvent, Axis = H.Axis, defaultOptions = H.defaultOptions, fireEvent = H.fireEvent, hasTouch = H.hasTouch, isTouchDevice = H.isTouchDevice, merge = H.merge, removeEvent = H.removeEvent, swapXY;
         /**
          *
          * The scrollbar is a means of panning over the X axis of a stock chart.
@@ -108,7 +108,7 @@
              * @type  {boolean}
              * @since 1.3
              */
-            liveRedraw: undefined,
+            liveRedraw: void 0,
             /**
              * The margin between the scrollbar and its axis when the scrollbar is
              * applied directly to an axis.
@@ -918,8 +918,8 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var defined = U.defined, erase = U.erase, isArray = U.isArray, isNumber = U.isNumber, splat = U.splat;
-        var addEvent = H.addEvent, Axis = H.Axis, Chart = H.Chart, color = H.color, defaultOptions = H.defaultOptions, destroyObjectProperties = H.destroyObjectProperties, extend = H.extend, hasTouch = H.hasTouch, isTouchDevice = H.isTouchDevice, merge = H.merge, pick = H.pick, removeEvent = H.removeEvent, Scrollbar = H.Scrollbar, Series = H.Series, seriesTypes = H.seriesTypes, defaultSeriesType, 
+        var clamp = U.clamp, correctFloat = U.correctFloat, defined = U.defined, destroyObjectProperties = U.destroyObjectProperties, erase = U.erase, extend = U.extend, isArray = U.isArray, isNumber = U.isNumber, pick = U.pick, splat = U.splat;
+        var addEvent = H.addEvent, Axis = H.Axis, Chart = H.Chart, color = H.color, defaultOptions = H.defaultOptions, hasTouch = H.hasTouch, isTouchDevice = H.isTouchDevice, merge = H.merge, removeEvent = H.removeEvent, Scrollbar = H.Scrollbar, Series = H.Series, seriesTypes = H.seriesTypes, defaultSeriesType, 
         // Finding the min or max of a set of variables where we don't know if they
         // are defined, is a pattern that is repeated several places in Highcharts.
         // Consider making this a global utility method.
@@ -933,7 +933,7 @@
                 return Math[extreme].apply(0, numbers);
             }
         };
-        defaultSeriesType = seriesTypes.areaspline === undefined ?
+        defaultSeriesType = typeof seriesTypes.areaspline === 'undefined' ?
             'line' :
             'areaspline';
         extend(defaultOptions, {
@@ -1154,8 +1154,8 @@
                  * is borrowed from the first series in the chart.
                  *
                  * Default series options for the navigator series are:
-                 *
-                 * <pre>series: {
+                 * ```js
+                 * series: {
                  *     type: 'areaspline',
                  *     fillOpacity: 0.05,
                  *     dataGrouping: {
@@ -1165,7 +1165,8 @@
                  *     marker: {
                  *         enabled: false
                  *     }
-                 * }</pre>
+                 * }
+                 * ```
                  *
                  * @see In styled mode, the navigator series is styled with the
                  *      `.highcharts-navigator-series` class.
@@ -1175,12 +1176,19 @@
                  * @sample {highstock} stock/navigator/series/
                  *         A green navigator series
                  *
-                 * @type {*|Highcharts.SeriesOptionsType}
+                 * @type {*|Array<*>|Highcharts.SeriesOptionsType|Array<Highcharts.SeriesOptionsType>}
                  */
                 series: {
                     /**
                      * The type of the navigator series. Defaults to `areaspline` if
                      * defined, otherwise `line`.
+                     *
+                     * Heads up:
+                     * In column-type navigator, zooming is limited to at least one
+                     * point with its `pointRange`.
+                     *
+                     * @sample {highstock} stock/navigator/column/
+                     *         Column type navigator
                      *
                      * @type    {string}
                      * @default areaspline
@@ -1235,9 +1243,7 @@
                      * @extends plotOptions.series.dataLabels
                      */
                     dataLabels: {
-                        /** @internal */
                         enabled: false,
-                        /** @internal */
                         zIndex: 2 // #1839
                     },
                     id: 'highcharts-navigator-series',
@@ -1258,7 +1264,17 @@
                     marker: {
                         enabled: false
                     },
-                    pointRange: 0,
+                    /**
+                     * Since Highstock v8, default value is the same as default
+                     * `pointRange` defined for a specific type (e.g. `null` for
+                     * column type).
+                     *
+                     * In Highstock version < 8, defaults to 0.
+                     *
+                     * @extends plotOptions.series.pointRange
+                     * @type {number|null}
+                     * @apioption navigator.series.pointRange
+                     */
                     /**
                      * The threshold option. Setting it to 0 will make the default
                      * navigator area series draw its area from the 0 value and up.
@@ -1268,10 +1284,10 @@
                     threshold: null
                 },
                 /**
-                 * Options for the navigator X axis. Default series options
-                 * for the navigator xAxis are:
-                 *
-                 * <pre>xAxis: {
+                 * Options for the navigator X axis. Default series options for the
+                 * navigator xAxis are:
+                 * ```js
+                 * xAxis: {
                  *     tickWidth: 0,
                  *     lineWidth: 0,
                  *     gridLineWidth: 1,
@@ -1284,7 +1300,8 @@
                  *         x: 3,
                  *         y: -4
                  *     }
-                 * }</pre>
+                 * }
+                 * ```
                  *
                  * @extends   xAxis
                  * @excluding linkedTo, maxZoom, minRange, opposite, range, scrollbar,
@@ -1320,10 +1337,10 @@
                     crosshair: false
                 },
                 /**
-                 * Options for the navigator Y axis. Default series options
-                 * for the navigator yAxis are:
-                 *
-                 * <pre>yAxis: {
+                 * Options for the navigator Y axis. Default series options for the
+                 * navigator yAxis are:
+                 * ```js
+                 * yAxis: {
                  *     gridLineWidth: 0,
                  *     startOnTick: false,
                  *     endOnTick: false,
@@ -1336,7 +1353,8 @@
                  *         text: null
                  *     },
                  *     tickWidth: 0
-                 * }</pre>
+                 * }
+                 * ```
                  *
                  * @extends   yAxis
                  * @excluding height, linkedTo, maxZoom, minRange, ordinal, range,
@@ -1412,7 +1430,14 @@
          * @return {*}
          */
         Axis.prototype.toFixedRange = function (pxMin, pxMax, fixedMin, fixedMax) {
-            var fixedRange = this.chart && this.chart.fixedRange, newMin = pick(fixedMin, this.translate(pxMin, true, !this.horiz)), newMax = pick(fixedMax, this.translate(pxMax, true, !this.horiz)), changeRatio = fixedRange && (newMax - newMin) / fixedRange;
+            var fixedRange = this.chart && this.chart.fixedRange, halfPointRange = (this.pointRange || 0) / 2, newMin = pick(fixedMin, this.translate(pxMin, true, !this.horiz)), newMax = pick(fixedMax, this.translate(pxMax, true, !this.horiz)), changeRatio = fixedRange && (newMax - newMin) / fixedRange;
+            // Add/remove half point range to/from the extremes (#1172)
+            if (!defined(fixedMin)) {
+                newMin = correctFloat(newMin + halfPointRange);
+            }
+            if (!defined(fixedMax)) {
+                newMax = correctFloat(newMax - halfPointRange);
+            }
             // If the difference between the fixed range and the actual requested range
             // is too great, the user is dragging across an ordinal gap, and we need to
             // release the range selector button.
@@ -1425,7 +1450,7 @@
                 }
             }
             if (!isNumber(newMin) || !isNumber(newMax)) { // #1195, #7411
-                newMin = newMax = undefined;
+                newMin = newMax = void 0;
             }
             return {
                 min: newMin,
@@ -1734,11 +1759,13 @@
              * @return {void}
              */
             render: function (min, max, pxMin, pxMax) {
-                var navigator = this, chart = navigator.chart, navigatorWidth, scrollbarLeft, scrollbarTop, scrollbarHeight = navigator.scrollbarHeight, navigatorSize, xAxis = navigator.xAxis, scrollbarXAxis = xAxis.fake ? chart.xAxis[0] : xAxis, navigatorEnabled = navigator.navigatorEnabled, zoomedMin, zoomedMax, rendered = navigator.rendered, inverted = chart.inverted, verb, newMin, newMax, currentRange, minRange = chart.xAxis[0].minRange, maxRange = chart.xAxis[0].options.maxRange;
+                var navigator = this, chart = navigator.chart, navigatorWidth, scrollbarLeft, scrollbarTop, scrollbarHeight = navigator.scrollbarHeight, navigatorSize, xAxis = navigator.xAxis, pointRange = xAxis.pointRange || 0, scrollbarXAxis = xAxis.fake ? chart.xAxis[0] : xAxis, navigatorEnabled = navigator.navigatorEnabled, zoomedMin, zoomedMax, rendered = navigator.rendered, inverted = chart.inverted, verb, newMin, newMax, currentRange, minRange = chart.xAxis[0].minRange, maxRange = chart.xAxis[0].options.maxRange;
                 // Don't redraw while moving the handles (#4703).
                 if (this.hasDragged && !defined(pxMin)) {
                     return;
                 }
+                min = correctFloat(min - pointRange / 2);
+                max = correctFloat(max + pointRange / 2);
                 // Don't render the navigator until we have data (#486, #4202, #5172).
                 if (!isNumber(min) || !isNumber(max)) {
                     // However, if navigator was already rendered, we may need to resize
@@ -1774,28 +1801,29 @@
                 // Are we below the minRange? (#2618, #6191)
                 newMin = xAxis.toValue(pxMin, true);
                 newMax = xAxis.toValue(pxMax, true);
-                currentRange = Math.abs(H.correctFloat(newMax - newMin));
+                currentRange = Math.abs(correctFloat(newMax - newMin));
                 if (currentRange < minRange) {
                     if (this.grabbedLeft) {
-                        pxMin = xAxis.toPixels(newMax - minRange, true);
+                        pxMin = xAxis.toPixels(newMax - minRange - pointRange, true);
                     }
                     else if (this.grabbedRight) {
-                        pxMax = xAxis.toPixels(newMin + minRange, true);
+                        pxMax = xAxis.toPixels(newMin + minRange + pointRange, true);
                     }
                 }
-                else if (defined(maxRange) && currentRange > maxRange) {
+                else if (defined(maxRange) &&
+                    correctFloat(currentRange - pointRange) > maxRange) {
                     if (this.grabbedLeft) {
-                        pxMin = xAxis.toPixels(newMax - maxRange, true);
+                        pxMin = xAxis.toPixels(newMax - maxRange - pointRange, true);
                     }
                     else if (this.grabbedRight) {
-                        pxMax = xAxis.toPixels(newMin + maxRange, true);
+                        pxMax = xAxis.toPixels(newMin + maxRange + pointRange, true);
                     }
                 }
                 // Handles are allowed to cross, but never exceed the plot area
-                navigator.zoomedMax = Math.min(Math.max(pxMin, pxMax, 0), zoomedMax);
-                navigator.zoomedMin = Math.min(Math.max(navigator.fixedWidth ?
+                navigator.zoomedMax = clamp(Math.max(pxMin, pxMax), 0, zoomedMax);
+                navigator.zoomedMin = clamp(navigator.fixedWidth ?
                     navigator.zoomedMax - navigator.fixedWidth :
-                    Math.min(pxMin, pxMax), 0), zoomedMax);
+                    Math.min(pxMin, pxMax), 0, zoomedMax);
                 navigator.range = navigator.zoomedMax - navigator.zoomedMin;
                 zoomedMax = Math.round(navigator.zoomedMax);
                 zoomedMin = Math.round(navigator.zoomedMin);
@@ -1862,10 +1890,10 @@
                 // Add mouse move and mouseup events. These are bind to doc/container,
                 // because Navigator.grabbedSomething flags are stored in mousedown
                 // events
-                eventsToUnbind.push(addEvent(container, 'mousemove', mouseMoveHandler), addEvent(container.ownerDocument, 'mouseup', mouseUpHandler));
+                eventsToUnbind.push(addEvent(chart.renderTo, 'mousemove', mouseMoveHandler), addEvent(container.ownerDocument, 'mouseup', mouseUpHandler));
                 // Touch events
                 if (hasTouch) {
-                    eventsToUnbind.push(addEvent(container, 'touchmove', mouseMoveHandler), addEvent(container.ownerDocument, 'touchend', mouseUpHandler));
+                    eventsToUnbind.push(addEvent(chart.renderTo, 'touchmove', mouseMoveHandler), addEvent(container.ownerDocument, 'touchend', mouseUpHandler));
                     eventsToUnbind.concat(navigator.getPartsEvents('touchstart'));
                 }
                 navigator.eventsToUnbind = eventsToUnbind;
@@ -2097,7 +2125,8 @@
                         });
                     }
                 }
-                if (e.DOMType !== 'mousemove') {
+                if (e.DOMType !== 'mousemove' &&
+                    e.DOMType !== 'touchmove') {
                     navigator.grabbedLeft = navigator.grabbedRight =
                         navigator.grabbedCenter = navigator.fixedWidth =
                             navigator.fixedExtreme = navigator.otherHandlePos =
@@ -2116,7 +2145,7 @@
                     this.eventsToUnbind.forEach(function (unbind) {
                         unbind();
                     });
-                    this.eventsToUnbind = undefined;
+                    this.eventsToUnbind = void 0;
                 }
                 this.removeBaseSeriesEvents();
             },
@@ -2164,7 +2193,7 @@
                 this.navigatorOptions = navigatorOptions;
                 this.scrollbarOptions = scrollbarOptions;
                 this.outlineHeight = height + scrollbarHeight;
-                this.opposite = pick(navigatorOptions.opposite, !navigatorEnabled && chart.inverted); // #6262
+                this.opposite = pick(navigatorOptions.opposite, Boolean(!navigatorEnabled && chart.inverted)); // #6262
                 var navigator = this, baseSeries = navigator.baseSeries, xAxisIndex = chart.xAxis.length, yAxisIndex = chart.yAxis.length, baseXaxis = baseSeries && baseSeries[0] && baseSeries[0].xAxis ||
                     chart.xAxis[0] || { options: {} };
                 chart.isDirtyBox = true;
@@ -2404,6 +2433,12 @@
                         baseOptions = base.options || {};
                         baseNavigatorOptions = baseOptions.navigatorOptions || {};
                         mergedNavSeriesOptions = merge(baseOptions, navSeriesMixin, userNavOptions, baseNavigatorOptions);
+                        // Once nav series type is resolved, pick correct pointRange
+                        mergedNavSeriesOptions.pointRange = pick(
+                        // Stricte set pointRange in options
+                        userNavOptions.pointRange, baseNavigatorOptions.pointRange, 
+                        // Fallback to default values, e.g. `null` for column
+                        defaultOptions.plotOptions[mergedNavSeriesOptions.type || 'line'].pointRange);
                         // Merge data separately. Do a slice to avoid mutating the
                         // navigator options from base series (#4923).
                         var navigatorSeriesData = baseNavigatorOptions.data || userNavOptions.data;
@@ -2531,7 +2566,7 @@
              */
             modifyNavigatorAxisExtremes: function () {
                 var xAxis = this.xAxis, unionExtremes;
-                if (xAxis.getExtremes) {
+                if (typeof xAxis.getExtremes !== 'undefined') {
                     unionExtremes = this.getUnionExtremes(true);
                     if (unionExtremes &&
                         (unionExtremes.dataMin !== xAxis.min ||
@@ -2719,7 +2754,7 @@
                         }
                     }
                 }
-                if (e.zoomed !== undefined) {
+                if (typeof e.zoomed !== 'undefined') {
                     e.preventDefault();
                 }
             });
@@ -2849,9 +2884,9 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var defined = U.defined;
+        var defined = U.defined, extend = U.extend, pick = U.pick;
         // Has a dependency on Navigator due to the use of Axis.toFixedRange
-        var addEvent = H.addEvent, Axis = H.Axis, Chart = H.Chart, css = H.css, extend = H.extend, noop = H.noop, pick = H.pick, Series = H.Series, timeUnits = H.timeUnits;
+        var addEvent = H.addEvent, Axis = H.Axis, Chart = H.Chart, css = H.css, noop = H.noop, Series = H.Series, timeUnits = H.timeUnits;
         /* eslint-disable no-invalid-this, valid-jsdoc */
         /* ************************************************************************** *
          * Start ordinal axis logic                                                   *
@@ -2882,7 +2917,7 @@
             if ((!this.options.ordinal && !this.options.breaks) ||
                 !positions ||
                 positions.length < 3 ||
-                min === undefined) {
+                typeof min === 'undefined') {
                 return time.getTimeTicks.apply(time, arguments);
             }
             // Analyze the positions array to split it into segments on gaps larger than
@@ -2967,7 +3002,7 @@
                 }
                 // Now loop over again and remove ticks where needed
                 i = groupPositions[length - 1] > max ? length - 1 : length; // #817
-                lastTranslated = undefined;
+                lastTranslated = void 0;
                 while (i--) {
                     translated = translatedArr[i];
                     distance = Math.abs(lastTranslated - translated);
@@ -3118,7 +3153,7 @@
                     else {
                         axis.overscrollPointsRange = pick(axis.closestPointRange, axis.overscrollPointsRange);
                         axis.ordinalPositions = axis.ordinalSlope = axis.ordinalOffset =
-                            undefined;
+                            void 0;
                     }
                 }
                 axis.isOrdinal = isOrdinal && useOrdinal; // #3818, #4196, #4926
@@ -3236,7 +3271,8 @@
                     // If the index is within the range of the ordinal positions, return
                     // the associated or interpolated value. If not, just return the
                     // value
-                    return (distance !== undefined && ordinalPositions[i] !== undefined ?
+                    return (typeof distance !== 'undefined' &&
+                        typeof ordinalPositions[i] !== 'undefined' ?
                         ordinalPositions[i] + (distance ?
                             distance *
                                 (ordinalPositions[i + 1] - ordinalPositions[i]) :
@@ -3439,8 +3475,12 @@
         Axis.prototype.ordinal2lin = Axis.prototype.val2lin;
         // Extending the Chart.pan method for ordinal axes
         addEvent(Chart, 'pan', function (e) {
-            var chart = this, xAxis = chart.xAxis[0], overscroll = xAxis.options.overscroll, chartX = e.originalEvent.chartX, runBase = false;
-            if (xAxis.options.ordinal && xAxis.series.length) {
+            var chart = this, xAxis = chart.xAxis[0], overscroll = xAxis.options.overscroll, chartX = e.originalEvent.chartX, panning = chart.options.chart &&
+                chart.options.chart.panning, runBase = false;
+            if (panning &&
+                panning.type !== 'y' &&
+                xAxis.options.ordinal &&
+                xAxis.series.length) {
                 var mouseDownX = chart.mouseDownX, extremes = xAxis.getExtremes(), dataMax = extremes.dataMax, min = extremes.min, max = extremes.max, trimmedRange, hoverPoints = chart.hoverPoints, closestPointRange = xAxis.closestPointRange || xAxis.overscrollPointsRange, pointPixelWidth = (xAxis.translationSlope *
                     (xAxis.ordinalSlope || closestPointRange)), 
                 // how many ordinal units did we move?
@@ -3501,7 +3541,7 @@
                 runBase = true;
             }
             // revert to the linear chart.pan version
-            if (runBase) {
+            if (runBase || (panning && /y/.test(panning.type))) {
                 if (overscroll) {
                     xAxis.max = xAxis.dataMax + overscroll;
                 }
@@ -3553,8 +3593,8 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var isArray = U.isArray;
-        var addEvent = H.addEvent, pick = H.pick, extend = H.extend, find = H.find, fireEvent = H.fireEvent, Axis = H.Axis, Series = H.Series;
+        var extend = U.extend, isArray = U.isArray, pick = U.pick;
+        var addEvent = H.addEvent, find = H.find, fireEvent = H.fireEvent, Axis = H.Axis, Series = H.Series;
         /**
          * Returns the first break found where the x is larger then break.from and
          * smaller then break.to.
@@ -3692,6 +3732,10 @@
             axis.isBroken = isBroken;
             axis.options.breaks = axis.userOptions.breaks = breaks;
             axis.forceRedraw = true; // Force recalculation in setScale
+            // Recalculate series related to the axis.
+            axis.series.forEach(function (series) {
+                series.isDirty = true;
+            });
             if (!isBroken && axis.val2lin === breakVal2Lin) {
                 // Revert to prototype functions
                 delete axis.val2lin;
@@ -3813,21 +3857,23 @@
             }
         };
         addEvent(Series, 'afterGeneratePoints', function () {
-            var series = this, xAxis = series.xAxis, yAxis = series.yAxis, points = series.points, point, i = points.length, connectNulls = series.options.connectNulls, nullGap;
-            if (xAxis && yAxis && (xAxis.options.breaks || yAxis.options.breaks)) {
+            var _a = this, isDirty = _a.isDirty, connectNulls = _a.options.connectNulls, points = _a.points, xAxis = _a.xAxis, yAxis = _a.yAxis;
+            /* Set, or reset visibility of the points. Axis.setBreaks marks the series
+            as isDirty */
+            if (isDirty) {
+                var i = points.length;
                 while (i--) {
-                    point = points[i];
+                    var point = points[i];
                     // Respect nulls inside the break (#4275)
-                    nullGap = point.y === null && connectNulls === false;
-                    if (!nullGap &&
-                        (xAxis.isInAnyBreak(point.x, true) ||
-                            yAxis.isInAnyBreak(point.y, true))) {
-                        points.splice(i, 1);
-                        if (this.data[i]) {
-                            // Removes the graphics for this point if they exist
-                            this.data[i].destroyElements();
-                        }
-                    }
+                    var nullGap = point.y === null && connectNulls === false;
+                    var isPointInBreak = (!nullGap &&
+                        (xAxis && xAxis.isInAnyBreak(point.x, true) ||
+                            yAxis && yAxis.isInAnyBreak(point.y, true)));
+                    // Set point.visible if in any break.
+                    // If not in break, reset visible to original value.
+                    point.visible = isPointInBreak ?
+                        false :
+                        point.options.visible !== false;
                 }
             }
         });
@@ -3883,7 +3929,7 @@
          *         Gapped path
          */
         H.Series.prototype.gappedPath = function () {
-            var currentDataGrouping = this.currentDataGrouping, groupingSize = currentDataGrouping && currentDataGrouping.gapSize, gapSize = this.options.gapSize, points = this.points.slice(), i = points.length - 1, yAxis = this.yAxis, xRange, stack;
+            var currentDataGrouping = this.currentDataGrouping, groupingSize = currentDataGrouping && currentDataGrouping.gapSize, gapSize = this.options.gapSize, points = this.points.slice(), i = points.length - 1, yAxis = this.yAxis, stack;
             /**
              * Defines when to display a gap in the graph, together with the
              * [gapUnit](plotOptions.series.gapUnit) option.
@@ -3909,6 +3955,7 @@
              * @type      {number}
              * @default   0
              * @product   highstock
+             * @requires  modules/broken-axis
              * @apioption plotOptions.series.gapSize
              */
             /**
@@ -3930,6 +3977,7 @@
              * @since      5.0.13
              * @product    highstock
              * @validvalue ["relative", "value"]
+             * @requires   modules/broken-axis
              * @apioption  plotOptions.series.gapUnit
              */
             if (gapSize && i > 0) { // #5008
@@ -3946,9 +3994,19 @@
                     gapSize = groupingSize;
                 }
                 // extension for ordinal breaks
+                var current = void 0, next = void 0;
                 while (i--) {
-                    if (points[i + 1].x - points[i].x > gapSize) {
-                        xRange = (points[i].x + points[i + 1].x) / 2;
+                    // Reassign next if it is not visible
+                    if (!(next && next.visible !== false)) {
+                        next = points[i + 1];
+                    }
+                    current = points[i];
+                    // Skip iteration if one of the points is not visible
+                    if (next.visible === false || current.visible === false) {
+                        continue;
+                    }
+                    if (next.x - current.x > gapSize) {
+                        var xRange = (current.x + next.x) / 2;
                         points.splice(// insert after this one
                         i + 1, 0, {
                             isNull: true,
@@ -3962,6 +4020,8 @@
                             stack.total = 0;
                         }
                     }
+                    // Assign current to next for the upcoming iteration
+                    next = current;
                 }
             }
             // Call base method
@@ -3998,8 +4058,8 @@
         * @name Highcharts.DataGroupingInfoObject#start
         * @type {number}
         */
-        var defined = U.defined, isNumber = U.isNumber;
-        var addEvent = H.addEvent, arrayMax = H.arrayMax, arrayMin = H.arrayMin, Axis = H.Axis, correctFloat = H.correctFloat, defaultPlotOptions = H.defaultPlotOptions, extend = H.extend, format = H.format, merge = H.merge, pick = H.pick, Point = H.Point, Series = H.Series, Tooltip = H.Tooltip;
+        var arrayMax = U.arrayMax, arrayMin = U.arrayMin, correctFloat = U.correctFloat, defined = U.defined, extend = U.extend, isNumber = U.isNumber, pick = U.pick;
+        var addEvent = H.addEvent, Axis = H.Axis, defaultPlotOptions = H.defaultPlotOptions, format = H.format, merge = H.merge, Point = H.Point, Series = H.Series, Tooltip = H.Tooltip;
         /* ************************************************************************** *
          *  Start data grouping module                                                *
          * ************************************************************************** */
@@ -4053,25 +4113,25 @@
                 });
                 // Return undefined when first elem. is undefined and let
                 // sum method handle null (#7377)
-                return ret[0] === undefined ? undefined : ret;
+                return typeof ret[0] === 'undefined' ? void 0 : ret;
             },
             open: function (arr) {
-                return arr.length ? arr[0] : (arr.hasNulls ? null : undefined);
+                return arr.length ? arr[0] : (arr.hasNulls ? null : void 0);
             },
             high: function (arr) {
                 return arr.length ?
                     arrayMax(arr) :
-                    (arr.hasNulls ? null : undefined);
+                    (arr.hasNulls ? null : void 0);
             },
             low: function (arr) {
                 return arr.length ?
                     arrayMin(arr) :
-                    (arr.hasNulls ? null : undefined);
+                    (arr.hasNulls ? null : void 0);
             },
             close: function (arr) {
                 return arr.length ?
                     arr[arr.length - 1] :
-                    (arr.hasNulls ? null : undefined);
+                    (arr.hasNulls ? null : void 0);
             },
             // ohlc and range are special cases where a multidimensional array is
             // input and an array is output
@@ -4138,7 +4198,7 @@
             for (i; i <= dataLength; i++) {
                 // when a new group is entered, summarize and initialize
                 // the previous group
-                while ((groupPositions[pos + 1] !== undefined &&
+                while ((typeof groupPositions[pos + 1] !== 'undefined' &&
                     xData[i] >= groupPositions[pos + 1]) ||
                     i === dataLength) { // get the last group
                     // get group x and y
@@ -4164,7 +4224,7 @@
                         });
                     }
                     // push the grouped data
-                    if (groupedY !== undefined) {
+                    if (typeof groupedY !== 'undefined') {
                         groupedXData.push(pointX);
                         groupedYData.push(groupedY);
                         groupMap.push(series.dataGroupInfo);
@@ -4226,9 +4286,7 @@
         // -----------------------------------------------------------------------------
         // The following code applies to implementation of data grouping on a Series
         var seriesProto = Series.prototype, baseProcessData = seriesProto.processData, baseGeneratePoints = seriesProto.generatePoints, 
-        /**
-         * @ignore
-         */
+        /** @ignore */
         commonOptions = {
             // enabled: null, // (true for stock charts, false for basic),
             // forced: undefined,
@@ -4284,6 +4342,7 @@
             spline: {},
             area: {},
             areaspline: {},
+            arearange: {},
             column: {
                 groupPixelWidth: 10
             },
@@ -4349,7 +4408,7 @@
          *
          * @param {Array<number>} xData
          *
-         * @param {Array<number>} yData
+         * @param {Array<number>|Array<Array<number>>} yData
          *
          * @param {boolean} groupPositions
          *
@@ -4438,9 +4497,9 @@
                         if ((!defined(xAxis.options.min) &&
                             xAxis.min <= xAxis.dataMin) ||
                             xAxis.min === xAxis.dataMin) {
-                            xAxis.min = groupedXData[0];
+                            xAxis.min = Math.min(groupedXData[0], xAxis.min);
                         }
-                        xAxis.dataMin = groupedXData[0];
+                        xAxis.dataMin = Math.min(groupedXData[0], xAxis.dataMin);
                     }
                     // We calculated all group positions but we should render
                     // only the ones within the visible range
@@ -4466,14 +4525,20 @@
         };
         // Destroy the grouped data points. #622, #740
         seriesProto.destroyGroupedData = function () {
-            var groupedData = this.groupedData;
-            // clear previous groups
-            (groupedData || []).forEach(function (point, i) {
-                if (point) {
-                    groupedData[i] = point.destroy ? point.destroy() : null;
-                }
-            });
-            this.groupedData = null;
+            // Clear previous groups
+            if (this.groupedData) {
+                this.groupedData.forEach(function (point, i) {
+                    if (point) {
+                        this.groupedData[i] = point.destroy ?
+                            point.destroy() : null;
+                    }
+                }, this);
+                // Clears all:
+                // - `this.groupedData`
+                // - `this.points`
+                // - `preserve` object in series.update()
+                this.groupedData.length = 0;
+            }
         };
         // Override the generatePoints method by adding a reference to grouped data
         seriesProto.generatePoints = function () {
@@ -4494,7 +4559,7 @@
         // Extend the original method, make the tooltip's header reflect the grouped
         // range.
         addEvent(Tooltip, 'headerFormatter', function (e) {
-            var tooltip = this, time = this.chart.time, labelConfig = e.labelConfig, series = labelConfig.series, options = series.options, tooltipOptions = series.tooltipOptions, dataGroupingOptions = options.dataGrouping, xDateFormat = tooltipOptions.xDateFormat, xDateFormatEnd, xAxis = series.xAxis, currentDataGrouping, dateTimeLabelFormats, labelFormats, formattedKey, formatString = tooltipOptions[(e.isFooter ? 'footer' : 'header') + 'Format'];
+            var tooltip = this, chart = this.chart, time = chart.time, labelConfig = e.labelConfig, series = labelConfig.series, options = series.options, tooltipOptions = series.tooltipOptions, dataGroupingOptions = options.dataGrouping, xDateFormat = tooltipOptions.xDateFormat, xDateFormatEnd, xAxis = series.xAxis, currentDataGrouping, dateTimeLabelFormats, labelFormats, formattedKey, formatString = tooltipOptions[(e.isFooter ? 'footer' : 'header') + 'Format'];
             // apply only to grouped series
             if (xAxis &&
                 xAxis.options.type === 'datetime' &&
@@ -4537,7 +4602,7 @@
                 e.text = format(formatString, {
                     point: extend(labelConfig.point, { key: formattedKey }),
                     series: series
-                }, time);
+                }, chart);
                 e.preventDefault();
             }
         });
@@ -4555,8 +4620,8 @@
                     defaultOptions = merge(commonOptions, specificOptions[type]);
                 }
                 options.dataGrouping = merge(baseOptions, defaultOptions, plotOptions.series && plotOptions.series.dataGrouping, // #1228
-                plotOptions[type].dataGrouping, // Set by the StockChart constructor
-                this.userOptions.dataGrouping);
+                // Set by the StockChart constructor:
+                plotOptions[type].dataGrouping, this.userOptions.dataGrouping);
             }
         });
         // When resetting the scale reset the hasProccessed flag to avoid taking
@@ -4607,7 +4672,7 @@
          *
          * @function Highcharts.Axis#setDataGrouping
          *
-         * @param {boolean|Highcharts.PlotSeriesDataGroupingOptions} [dataGrouping]
+         * @param {boolean|Highcharts.DataGroupingOptionsObject} [dataGrouping]
          *        A `dataGrouping` configuration. Use `false` to disable data grouping
          *        dynamically.
          *
@@ -4664,7 +4729,9 @@
          * the first point instance are copied over to the group point. This can be
          * altered through a custom `approximation` callback function.
          *
+         * @declare   Highcharts.DataGroupingOptionsObject
          * @product   highstock
+         * @requires  modules/datagrouping
          * @apioption plotOptions.series.dataGrouping
          */
         /**
@@ -4708,8 +4775,8 @@
          * time range and the current data grouping.
          *
          * The default formats are:
-         *
-         * <pre>{
+         * ```js
+         * {
          *     millisecond: [
          *         '%A, %b %e, %H:%M:%S.%L', '%A, %b %e, %H:%M:%S.%L', '-%H:%M:%S.%L'
          *     ],
@@ -4720,7 +4787,8 @@
          *     week: ['Week from %A, %b %e, %Y', '%A, %b %e', '-%A, %b %e, %Y'],
          *     month: ['%B %Y', '%B', '-%B %Y'],
          *     year: ['%Y', '%Y', '-%Y']
-         * }</pre>
+         * }
+         * ```
          *
          * For each of these array definitions, the first item is the format
          * used when the active time span is one unit. For instance, if the
@@ -4803,9 +4871,10 @@
          * An array determining what time intervals the data is allowed to be
          * grouped to. Each array item is an array where the first value is
          * the time unit and the second value another array of allowed multiples.
-         * Defaults to:
          *
-         * <pre>units: [[
+         * Defaults to:
+         * ```js
+         * units: [[
          *     'millisecond', // unit name
          *     [1, 2, 5, 10, 20, 25, 50, 100, 200, 500] // allowed multiples
          * ], [
@@ -4829,7 +4898,8 @@
          * ], [
          *     'year',
          *     null
-         * ]]</pre>
+         * ]]
+         * ```
          *
          * @type      {Array<Array<string,(Array<number>|null)>>}
          * @product   highstock
@@ -5058,7 +5128,7 @@
                 var series = this, points = series.points, chart = series.chart;
                 points.forEach(function (point) {
                     var plotOpen, plotClose, crispCorr, halfWidth, path, graphic = point.graphic, crispX, isNew = !graphic;
-                    if (point.plotY !== undefined) {
+                    if (typeof point.plotY !== 'undefined') {
                         // Create and/or update the graphic
                         if (!graphic) {
                             point.graphic = graphic = chart.renderer.path()
@@ -5356,7 +5426,7 @@
                 var series = this, points = series.points, chart = series.chart, reversedYAxis = series.yAxis.reversed;
                 points.forEach(function (point) {
                     var graphic = point.graphic, plotOpen, plotClose, topBox, bottomBox, hasTopWhisker, hasBottomWhisker, crispCorr, crispX, path, halfWidth, isNew = !graphic;
-                    if (point.plotY !== undefined) {
+                    if (typeof point.plotY !== 'undefined') {
                         if (!graphic) {
                             point.graphic = graphic = chart.renderer.path()
                                 .add(series.group);
@@ -5533,14 +5603,15 @@
                         point = points[cursor];
                         point.y = leftPoint.y;
                         if (leftPoint.x <= point.x &&
-                            leftPoint[onKey] !== undefined) {
+                            typeof leftPoint[onKey] !== 'undefined') {
                             if (point.x <= lastX) { // #803
                                 point.plotY = leftPoint[onKey];
                                 // interpolate between points, #666
                                 if (leftPoint.x < point.x &&
                                     !step) {
                                     rightPoint = onData[i + 1];
-                                    if (rightPoint && rightPoint[onKey] !== undefined) {
+                                    if (rightPoint &&
+                                        typeof rightPoint[onKey] !== 'undefined') {
                                         // the distance ratio, between 0 and 1
                                         distanceRatio =
                                             (point.x - leftPoint.x) /
@@ -5573,7 +5644,7 @@
                     // we must remove the shapeArgs (#847). For inverted charts, we need
                     // to calculate position anyway, because series.invertGroups is not
                     // defined
-                    if (point.plotY === undefined || inverted) {
+                    if (typeof point.plotY === 'undefined' || inverted) {
                         if (point.plotX >= 0 &&
                             point.plotX <= xAxis.len) {
                             // We're inside xAxis range
@@ -5595,7 +5666,7 @@
                     // if multiple flags appear at the same x, order them into a stack
                     lastPoint = points[i - 1];
                     if (lastPoint && lastPoint.plotX === point.plotX) {
-                        if (lastPoint.stackIndex === undefined) {
+                        if (typeof lastPoint.stackIndex === 'undefined') {
                             lastPoint.stackIndex = 0;
                         }
                         stackIndex = lastPoint.stackIndex + 1;
@@ -5622,7 +5693,7 @@
         /**
          * @typedef {"circlepin"|"flag"|"squarepin"} Highcharts.FlagsShapeValue
          */
-        var defined = U.defined, isNumber = U.isNumber, objectEach = U.objectEach;
+        var defined = U.defined, isNumber = U.isNumber, objectEach = U.objectEach, wrap = U.wrap;
         var addEvent = H.addEvent, merge = H.merge, noop = H.noop, Renderer = H.Renderer, Series = H.Series, seriesType = H.seriesType, SVGRenderer = H.SVGRenderer, TrackerMixin = H.TrackerMixin, VMLRenderer = H.VMLRenderer, symbols = SVGRenderer.prototype.symbols;
         /**
          * The Flags series.
@@ -5907,19 +5978,19 @@
                     stackIndex = point.stackIndex;
                     shape = point.options.shape || options.shape;
                     plotY = point.plotY;
-                    if (plotY !== undefined) {
+                    if (typeof plotY !== 'undefined') {
                         plotY = point.plotY + optionsY -
-                            (stackIndex !== undefined &&
+                            (typeof stackIndex !== 'undefined' &&
                                 (stackIndex * options.stackDistance));
                     }
                     // skip connectors for higher level stacked points
-                    point.anchorX = stackIndex ? undefined : point.plotX;
-                    anchorY = stackIndex ? undefined : point.plotY;
+                    point.anchorX = stackIndex ? void 0 : point.plotX;
+                    anchorY = stackIndex ? void 0 : point.plotY;
                     centered = shape !== 'flag';
                     graphic = point.graphic;
                     // Only draw the point if y is defined and the flag is within
                     // the visible area
-                    if (plotY !== undefined &&
+                    if (typeof plotY !== 'undefined' &&
                         plotX >= 0 &&
                         !outsideRight) {
                         // Create the flag
@@ -6017,7 +6088,7 @@
                 }
                 // Can be a mix of SVG and HTML and we need events for both (#6303)
                 if (options.useHTML) {
-                    H.wrap(series.markerGroup, 'on', function (proceed) {
+                    wrap(series.markerGroup, 'on', function (proceed) {
                         return H.SVGElement.prototype.on.apply(
                         // for HTML
                         proceed.apply(this, [].slice.call(arguments, 1)), 
@@ -6119,7 +6190,7 @@
             isValid: function () {
                 // #9233 - Prevent from treating flags as null points (even if
                 // they have no y values defined).
-                return isNumber(this.y) || this.y === undefined;
+                return isNumber(this.y) || typeof this.y === 'undefined';
             }
         });
         // create the flag icon with anchor
@@ -6277,8 +6348,8 @@
          * @return {number}
          *         Parsed JavaScript time value.
          */
-        var defined = U.defined, isNumber = U.isNumber, objectEach = U.objectEach, pInt = U.pInt, splat = U.splat;
-        var addEvent = H.addEvent, Axis = H.Axis, Chart = H.Chart, css = H.css, createElement = H.createElement, defaultOptions = H.defaultOptions, destroyObjectProperties = H.destroyObjectProperties, discardElement = H.discardElement, extend = H.extend, fireEvent = H.fireEvent, merge = H.merge, pick = H.pick;
+        var defined = U.defined, destroyObjectProperties = U.destroyObjectProperties, discardElement = U.discardElement, extend = U.extend, isNumber = U.isNumber, objectEach = U.objectEach, pick = U.pick, pInt = U.pInt, splat = U.splat;
+        var addEvent = H.addEvent, Axis = H.Axis, Chart = H.Chart, css = H.css, createElement = H.createElement, defaultOptions = H.defaultOptions, fireEvent = H.fireEvent, merge = H.merge;
         /* ************************************************************************** *
          * Start Range Selector code                                                  *
          * ************************************************************************** */
@@ -6310,9 +6381,9 @@
                 /**
                  * An array of configuration objects for the buttons.
                  *
-                 * Defaults to
-                 *
-                 * <pre>buttons: [{
+                 * Defaults to:
+                 * ```js
+                 * buttons: [{
                  *     type: 'month',
                  *     count: 1,
                  *     text: '1m'
@@ -6334,7 +6405,8 @@
                  * }, {
                  *     type: 'all',
                  *     text: 'All'
-                 * }]</pre>
+                 * }]
+                 * ```
                  *
                  * @sample {highstock} stock/rangeselector/datagrouping/
                  *         Data grouping by buttons
@@ -6355,11 +6427,11 @@
                  * event, is passed to the function, containing common event
                  * information.
                  *
-                 * <pre>
+                 * ```js
                  * click: function(e) {
                  *   console.log(this);
                  * }
-                 * </pre>
+                 * ```
                  *
                  * Return false to stop default button's click action.
                  *
@@ -6525,7 +6597,7 @@
                  * @type  {number|undefined}
                  * @since 2.1.9
                  */
-                height: undefined,
+                height: void 0,
                 /**
                  * The border color of the date input boxes.
                  *
@@ -6710,7 +6782,8 @@
          * on each chart initialization. Instead, use `Highcharts.setOptions` to
          * set it before any chart is initialized.
          *
-         * <pre>Highcharts.setOptions({
+         * ```js
+         * Highcharts.setOptions({
          *     lang: {
          *         months: [
          *             'Janvier', 'Février', 'Mars', 'Avril',
@@ -6722,7 +6795,8 @@
          *             'Jeudi', 'Vendredi', 'Samedi'
          *         ]
          *     }
-         * });</pre>
+         * });
+         * ```
          *
          * @optionparent lang
          */
@@ -6822,7 +6896,7 @@
                         // event (below). When the series are initialized, but before
                         // the chart is rendered, we have access to the xData array
                         // (#942).
-                        if (dataMax === undefined) {
+                        if (typeof dataMax === 'undefined') {
                             dataMin = Number.MAX_VALUE;
                             dataMax = Number.MIN_VALUE;
                             chart.series.forEach(function (series) {
@@ -6942,7 +7016,8 @@
                 // Extend the buttonOptions with actual range
                 buttonOptions.forEach(rangeSelector.computeButtonRange);
                 // zoomed range based on a pre-selected button index
-                if (selectedOption !== undefined && buttonOptions[selectedOption]) {
+                if (typeof selectedOption !== 'undefined' &&
+                    buttonOptions[selectedOption]) {
                     this.clickButton(selectedOption, false);
                 }
                 addEvent(chart, 'load', function () {
@@ -7157,7 +7232,7 @@
                             // max, use the actual data extreme (#2438).
                             if (isMin) {
                                 if (value > rangeSelector.maxInput.HCTime) {
-                                    value = undefined;
+                                    value = void 0;
                                 }
                                 else if (value < dataMin) {
                                     value = dataMin;
@@ -7165,15 +7240,15 @@
                             }
                             else {
                                 if (value < rangeSelector.minInput.HCTime) {
-                                    value = undefined;
+                                    value = void 0;
                                 }
                                 else if (value > dataMax) {
                                     value = dataMax;
                                 }
                             }
                             // Set the extremes
-                            if (value !== undefined) { // @todo typof undefined
-                                chartAxis.setExtremes(isMin ? value : chartAxis.min, isMin ? chartAxis.max : value, undefined, undefined, { trigger: 'rangeSelectorInput' });
+                            if (typeof value !== 'undefined') { // @todo typof undefined
+                                chartAxis.setExtremes(isMin ? value : chartAxis.min, isMin ? chartAxis.max : value, void 0, void 0, { trigger: 'rangeSelectorInput' });
                             }
                         }
                     }
@@ -7687,13 +7762,13 @@
             }
             if (min <= dataMin) {
                 min = dataMin;
-                if (range === undefined) { // #4501
+                if (typeof range === 'undefined') { // #4501
                     range = getTrueRange(min, rangeOptions.count);
                 }
                 this.newMax = Math.min(min + range, this.dataMax);
             }
             if (!isNumber(max)) {
-                min = undefined;
+                min = void 0;
             }
             return min;
         };
@@ -7824,14 +7899,14 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var defined = U.defined, isNumber = U.isNumber, isString = U.isString, splat = U.splat;
+        var arrayMax = U.arrayMax, arrayMin = U.arrayMin, clamp = U.clamp, defined = U.defined, extend = U.extend, isNumber = U.isNumber, isString = U.isString, pick = U.pick, splat = U.splat;
         // Has a dependency on Navigator due to the use of
         // defaultOptions.navigator
         // Has a dependency on Scrollbar due to the use of
         // defaultOptions.scrollbar
         // Has a dependency on RangeSelector due to the use of
         // defaultOptions.rangeSelector
-        var addEvent = H.addEvent, arrayMax = H.arrayMax, arrayMin = H.arrayMin, Axis = H.Axis, Chart = H.Chart, extend = H.extend, format = H.format, merge = H.merge, pick = H.pick, Point = H.Point, Renderer = H.Renderer, Series = H.Series, SVGRenderer = H.SVGRenderer, VMLRenderer = H.VMLRenderer, seriesProto = Series.prototype, seriesInit = seriesProto.init, seriesProcessData = seriesProto.processData, pointTooltipFormatter = Point.prototype.tooltipFormatter;
+        var addEvent = H.addEvent, Axis = H.Axis, Chart = H.Chart, format = H.format, merge = H.merge, Point = H.Point, Renderer = H.Renderer, Series = H.Series, SVGRenderer = H.SVGRenderer, VMLRenderer = H.VMLRenderer, seriesProto = Series.prototype, seriesInit = seriesProto.init, seriesProcessData = seriesProto.processData, pointTooltipFormatter = Point.prototype.tooltipFormatter;
         /**
          * Compare the values of the series against the first non-null, non-
          * zero value in the visible range. The y axis will show percentage
@@ -7855,7 +7930,8 @@
          */
         /**
          * Defines if comparison should start from the first point within the visible
-         * range or should start from the first point <b>before</b> the range.
+         * range or should start from the first point **before** the range.
+         *
          * In other words, this flag determines if first point within the visible range
          * will have 0% (`compareStart=true`) or should have been already calculated
          * according to the previous point (`compareStart=false`).
@@ -7923,13 +7999,13 @@
         H.StockChart = H.stockChart = function (a, b, c) {
             var hasRenderToArg = isString(a) || a.nodeName, options = arguments[hasRenderToArg ? 1 : 0], userOptions = options, 
             // to increase performance, don't merge the data
-            seriesOptions = options.series, defaultOptions = H.getOptions(), opposite, 
+            seriesOptions = options.series, defaultOptions = H.getOptions(), opposite, panning = options.chart && options.chart.panning, 
             // Always disable startOnTick:true on the main axis when the navigator
             // is enabled (#1090)
-            navigatorEnabled = pick(options.navigator && options.navigator.enabled, defaultOptions.navigator.enabled, true), disableStartOnTick = navigatorEnabled ? {
+            navigatorEnabled = pick(options.navigator && options.navigator.enabled, defaultOptions.navigator.enabled, true), verticalPanningEnabled = panning && /y/.test(panning.type), disableStartOnTick = {
                 startOnTick: false,
                 endOnTick: false
-            } : null;
+            };
             // apply X axis options to both single and multi y axes
             options.xAxis = splat(options.xAxis || {}).map(function (xAxisOptions, i) {
                 return merge({
@@ -7950,7 +8026,7 @@
                 {
                     type: 'datetime',
                     categories: null
-                }, disableStartOnTick);
+                }, (navigatorEnabled ? disableStartOnTick : null));
             });
             // apply Y axis options to both single and multi y axes
             options.yAxis = splat(options.yAxis || {}).map(function (yAxisOptions, i) {
@@ -7976,13 +8052,16 @@
                     }
                 }, defaultOptions.yAxis, // #3802
                 defaultOptions.yAxis && defaultOptions.yAxis[i], // #7690
-                yAxisOptions // user options
-                );
+                yAxisOptions, // user options
+                (verticalPanningEnabled ? disableStartOnTick : null));
             });
             options.series = null;
             options = merge({
                 chart: {
-                    panning: true,
+                    panning: {
+                        enabled: true,
+                        type: 'x'
+                    },
                     pinchType: 'x'
                 },
                 navigator: {
@@ -8056,7 +8135,7 @@
                     if (labelOptions.x === 15) { // default
                         labelOptions.x = 0;
                     }
-                    if (labelOptions.align === undefined) {
+                    if (typeof labelOptions.align === 'undefined') {
                         labelOptions.align = 'right';
                     }
                     panes[key] = this;
@@ -8147,7 +8226,7 @@
                             if (force !== 'pass' &&
                                 (x1 < axisLeft || x1 > axisLeft + axis.width)) {
                                 if (force) {
-                                    x1 = x2 = Math.min(Math.max(axisLeft, x1), axisLeft + axis.width);
+                                    x1 = x2 = clamp(x1, axisLeft, axisLeft + axis.width);
                                 }
                                 else {
                                     skip = true;
@@ -8168,7 +8247,7 @@
                             if (force !== 'pass' &&
                                 (y1 < axisTop || y1 > axisTop + axis.height)) {
                                 if (force) {
-                                    y1 = y2 = Math.min(Math.max(axisTop, y1), axis.top + axis.height);
+                                    y1 = y2 = clamp(y1, axisTop, axisTop + axis.height);
                                 }
                                 else {
                                     skip = true;
@@ -8302,7 +8381,7 @@
                 this.toValue(horiz ? e.chartX : e.chartY);
             crossLabel.attr({
                 text: formatOption ?
-                    format(formatOption, { value: value }, chart.time) :
+                    format(formatOption, { value: value }, chart) :
                     options.formatter.call(this, value),
                 x: posx,
                 y: posy,
@@ -8391,8 +8470,8 @@
             this.modifyValue = (compare === 'value' || compare === 'percent') ?
                 function (value, point) {
                     var compareValue = this.compareValue;
-                    if (value !== undefined &&
-                        compareValue !== undefined) { // #2601, #5814
+                    if (typeof value !== 'undefined' &&
+                        typeof compareValue !== 'undefined') { // #2601, #5814
                         // Get the modified value
                         if (compare === 'value') {
                             value -= compareValue;
@@ -8408,6 +8487,7 @@
                         }
                         return value;
                     }
+                    return 0;
                 } :
                 null;
             // Survive to export, #5485
@@ -8505,7 +8585,8 @@
          */
         Point.prototype.tooltipFormatter = function (pointFormat) {
             var point = this;
-            pointFormat = pointFormat.replace('{point.change}', (point.change > 0 ? '+' : '') + H.numberFormat(point.change, pick(point.series.tooltipOptions.changeDecimals, 2)));
+            var numberFormatter = point.series.chart.numberFormatter;
+            pointFormat = pointFormat.replace('{point.change}', (point.change > 0 ? '+' : '') + numberFormatter(point.change, pick(point.series.tooltipOptions.changeDecimals, 2)));
             return pointTooltipFormatter.apply(this, [pointFormat]);
         };
         /* ************************************************************************** *
@@ -8565,6 +8646,30 @@
                 merge(true, this.options.scrollbar, options.scrollbar);
                 this.navigator.update({}, false);
                 delete options.scrollbar;
+            }
+        });
+        // Extend the Axis prototype to calculate start min/max values
+        // (including min/maxPadding). This is related to using vertical panning
+        // (#11315).
+        addEvent(Axis, 'afterSetScale', function () {
+            var axis = this, panning = axis.chart.options.chart &&
+                axis.chart.options.chart.panning;
+            if (panning &&
+                (panning.type === 'y' ||
+                    panning.type === 'xy') &&
+                !axis.isXAxis &&
+                !defined(axis.panningState)) {
+                var min = Number.MAX_VALUE, max = Number.MIN_VALUE;
+                axis.series.forEach(function (series) {
+                    min = Math.min(H.arrayMin(series.yData), min) -
+                        (axis.min && axis.dataMin ? axis.dataMin - axis.min : 0);
+                    max = Math.max(H.arrayMax(series.yData), max) +
+                        (axis.max && axis.dataMax ? axis.max - axis.dataMax : 0);
+                });
+                axis.panningState = {
+                    startMin: min,
+                    startMax: max
+                };
             }
         });
 

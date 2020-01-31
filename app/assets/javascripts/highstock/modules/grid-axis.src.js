@@ -1,5 +1,5 @@
 /**
- * @license Highcharts Gantt JS v7.2.0 (2019-09-03)
+ * @license Highcharts Gantt JS v8.0.0 (2019-12-10)
  *
  * GridAxis
  *
@@ -39,19 +39,15 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var defined = U.defined, erase = U.erase, isArray = U.isArray, isNumber = U.isNumber;
+        var defined = U.defined, erase = U.erase, isArray = U.isArray, isNumber = U.isNumber, pick = U.pick, wrap = U.wrap;
         var addEvent = H.addEvent, argsToArray = function (args) {
             return Array.prototype.slice.call(args, 1);
         }, dateFormat = H.dateFormat, isObject = function (x) {
             // Always use strict mode
             return U.isObject(x, true);
-        }, merge = H.merge, pick = H.pick, wrap = H.wrap, Chart = H.Chart, Axis = H.Axis, Tick = H.Tick;
+        }, merge = H.merge, Chart = H.Chart, Axis = H.Axis, Tick = H.Tick;
         var applyGridOptions = function applyGridOptions(axis) {
-            var options = axis.options, gridOptions = options && isObject(options.grid) ? options.grid : {}, 
-            // TODO: Consider using cell margins defined in % of font size?
-            // 25 is optimal height for default fontSize (11px)
-            // 25 / 11 ≈ 2.28
-            fontSizeToCellHeightRatio = 25 / 11, fontSize = options.labels.style.fontSize, fontMetrics = axis.chart.renderer.fontMetrics(fontSize);
+            var options = axis.options;
             // Center-align by default
             if (!options.labels) {
                 options.labels = {};
@@ -65,12 +61,6 @@
                an "extra" label would appear. */
             if (!axis.categories) {
                 options.showLastLabel = false;
-            }
-            // Make tick marks taller, creating cell walls of a grid. Use cellHeight
-            // axis option if set
-            if (axis.horiz) {
-                options.tickLength = gridOptions.cellHeight ||
-                    fontMetrics.h * fontSizeToCellHeightRatio;
             }
             // Prevents rotation of labels when squished, as rotating them would not
             // help.
@@ -119,8 +109,10 @@
          */
         /**
          * Set cell height for grid axis labels. By default this is calculated from font
-         * size.
+         * size. This option only applies to horizontal axes.
          *
+         * @sample gantt/grid-axis/cellheight
+         *         Gant chart with custom cell height
          * @type      {number}
          * @apioption xAxis.grid.cellHeight
          */
@@ -195,7 +187,10 @@
                     if (label.textStr && !isNumber(label.textPxLength)) {
                         label.textPxLength = label.getBBox().width;
                     }
-                    tickWidth = isNumber(label.textPxLength) ? label.textPxLength : 0;
+                    tickWidth = isNumber(label.textPxLength) ?
+                        // Math.round ensures crisp lines
+                        Math.round(label.textPxLength) :
+                        0;
                     // Update the result if width and/or height are larger
                     dimensions.height = Math.max(tickHeight, dimensions.height);
                     dimensions.width = Math.max(tickWidth, dimensions.width);
@@ -299,13 +294,13 @@
         // Draw vertical axis ticks extra long to create cell floors and roofs.
         // Overrides the tickLength for vertical axes.
         addEvent(Axis, 'afterTickSize', function (e) {
-            var axis = this, dimensions = axis.maxLabelDimensions, options = axis.options, gridOptions = (options && isObject(options.grid)) ? options.grid : {}, labelPadding, distance;
-            if (gridOptions.enabled === true) {
-                labelPadding =
-                    (Math.abs(axis.defaultLeftAxisOptions.labels.x) * 2);
-                distance = labelPadding + (axis.horiz ?
-                    dimensions.height :
-                    dimensions.width);
+            var _a = this, defaultLeftAxisOptions = _a.defaultLeftAxisOptions, horiz = _a.horiz, _b = _a.options.grid, gridOptions = _b === void 0 ? {} : _b;
+            var dimensions = this.maxLabelDimensions;
+            if (gridOptions.enabled) {
+                var labelPadding = (Math.abs(defaultLeftAxisOptions.labels.x) * 2);
+                var distance = horiz ?
+                    gridOptions.cellHeight || labelPadding + dimensions.height :
+                    labelPadding + dimensions.width;
                 if (isArray(e.tickSize)) {
                     e.tickSize[0] = distance;
                 }
@@ -454,15 +449,17 @@
                                         break;
                                     }
                                 }
-                                // Spanning multiple years, go default
-                                if (!units[unitIdx][1]) {
-                                    return;
-                                }
                                 // Get the first allowed count on the next unit.
                                 if (units[unitIdx + 1]) {
                                     unitName = units[unitIdx + 1][0];
                                     count =
                                         (units[unitIdx + 1][1] || [1])[0];
+                                    // In case the base X axis shows years, make the
+                                    // secondary axis show ten times the years (#11427)
+                                }
+                                else if (parentInfo.unitName === 'year') {
+                                    unitName = 'year';
+                                    count = parentInfo.count * 10;
                                 }
                                 unitRange = H.timeUnits[unitName];
                                 this.tickInterval = unitRange * count;
@@ -574,20 +571,14 @@
          *        the original function
          */
         function () {
-            var axis = this, options = axis.options, gridOptions = ((options && isObject(options.grid)) ? options.grid : {}), labelPadding, distance, lineWidth, linePath, yStartIndex, yEndIndex, xStartIndex, xEndIndex, renderer = axis.chart.renderer, horiz = axis.horiz, axisGroupBox;
+            var axis = this, options = axis.options, gridOptions = ((options && isObject(options.grid)) ? options.grid : {}), yStartIndex, yEndIndex, xStartIndex, xEndIndex, renderer = axis.chart.renderer;
             if (gridOptions.enabled === true) {
                 // @todo acutual label padding (top, bottom, left, right)
-                // Label padding is needed to figure out where to draw the outer
-                // line.
-                labelPadding = (Math.abs(axis.defaultLeftAxisOptions.labels.x) * 2);
                 axis.maxLabelDimensions = axis.getMaxLabelDimensions(axis.ticks, axis.tickPositions);
-                distance = axis.maxLabelDimensions.width + labelPadding;
-                lineWidth = options.lineWidth;
                 // Remove right wall before rendering if updating
                 if (axis.rightWall) {
                     axis.rightWall.destroy();
                 }
-                axisGroupBox = axis.axisGroup.getBBox();
                 /*
                    Draw an extra axis line on outer axes
                                >
@@ -597,23 +588,19 @@
                    Into this:    |______|______|______|__|
                                                            */
                 if (axis.isOuterAxis() && axis.axisLine) {
-                    if (horiz) {
-                        // -1 to avoid adding distance each time the chart updates
-                        distance = axisGroupBox.height - 1;
-                    }
+                    var lineWidth = options.lineWidth;
                     if (lineWidth) {
-                        linePath = axis.getLinePath(lineWidth);
+                        var linePath = axis.getLinePath(lineWidth);
                         xStartIndex = linePath.indexOf('M') + 1;
                         xEndIndex = linePath.indexOf('L') + 1;
                         yStartIndex = linePath.indexOf('M') + 2;
                         yEndIndex = linePath.indexOf('L') + 2;
                         // Negate distance if top or left axis
-                        if (axis.side === axisSide.top ||
-                            axis.side === axisSide.left) {
-                            distance = -distance;
-                        }
+                        // Subtract 1px to draw the line at the end of the tick
+                        var distance = (axis.tickSize('tick')[0] - 1) * ((axis.side === axisSide.top ||
+                            axis.side === axisSide.left) ? -1 : 1);
                         // If axis is horizontal, reposition line path vertically
-                        if (horiz) {
+                        if (axis.horiz) {
                             linePath[yStartIndex] =
                                 linePath[yStartIndex] + distance;
                             linePath[yEndIndex] =
@@ -631,16 +618,16 @@
                             axis.axisLineExtra = renderer
                                 .path(linePath)
                                 .attr({
-                                /* eslint-disable spaced-comment */
-                        
-                                stroke: options.lineColor,
-                                'stroke-width': lineWidth,
-                        
-                                /* eslint-enable spaced-comment */
                                 zIndex: 7
                             })
                                 .addClass('highcharts-axis-line')
                                 .add(axis.axisGroup);
+                            if (!renderer.styledMode) {
+                                axis.axisLineExtra.attr({
+                                    stroke: options.lineColor,
+                                    'stroke-width': lineWidth
+                                });
+                            }
                         }
                         else {
                             axis.axisLineExtra.animate({

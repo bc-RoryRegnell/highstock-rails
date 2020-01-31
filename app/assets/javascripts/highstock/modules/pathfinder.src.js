@@ -1,5 +1,5 @@
 /**
- * @license Highcharts Gantt JS v7.2.0 (2019-09-03)
+ * @license Highcharts Gantt JS v8.0.0 (2019-12-10)
  *
  * Pathfinder
  *
@@ -28,7 +28,7 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'parts-gantt/PathfinderAlgorithms.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'parts-gantt/PathfinderAlgorithms.js', [_modules['parts/Utilities.js']], function (U) {
         /* *
          *
          *  (c) 2016 Highsoft AS
@@ -39,7 +39,8 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var min = Math.min, max = Math.max, abs = Math.abs, pick = H.pick;
+        var extend = U.extend, pick = U.pick;
+        var min = Math.min, max = Math.max, abs = Math.abs;
         /**
          * Get index of last obstacle before xMin. Employs a type of binary search, and
          * thus requires that obstacles are sorted by xMin value.
@@ -222,7 +223,7 @@
              *         renderer, as well as an array of new obstacles making up this
              *         path.
              */
-            simpleConnect: H.extend(function (start, end, options) {
+            simpleConnect: extend(function (start, end, options) {
                 var segments = [], endSegment, dir = pick(options.startDirectionX, abs(end.x - start.x) > abs(end.y - start.y)) ? 'x' : 'y', chartObstacles = options.chartObstacles, startObstacleIx = findObstacleFromPoint(chartObstacles, start), endObstacleIx = findObstacleFromPoint(chartObstacles, end), startObstacle, endObstacle, prevWaypoint, waypoint, waypoint2, useMax, endPoint;
                 // eslint-disable-next-line valid-jsdoc
                 /**
@@ -343,7 +344,7 @@
              *         renderer, as well as an array of new obstacles making up this
              *         path.
              */
-            fastAvoid: H.extend(function (start, end, options) {
+            fastAvoid: extend(function (start, end, options) {
                 /*
                     Algorithm rules/description
                     - Find initial direction
@@ -909,8 +910,8 @@
          *
          * @typedef {"fastAvoid"|"simpleConnect"|"straight"|string} Highcharts.PathfinderTypeValue
          */
-        var defined = U.defined, objectEach = U.objectEach, splat = U.splat;
-        var deg2rad = H.deg2rad, extend = H.extend, addEvent = H.addEvent, merge = H.merge, pick = H.pick, max = Math.max, min = Math.min;
+        var defined = U.defined, extend = U.extend, objectEach = U.objectEach, pick = U.pick, splat = U.splat;
+        var deg2rad = H.deg2rad, addEvent = H.addEvent, merge = H.merge, max = Math.max, min = Math.min;
         /*
          @todo:
              - Document how to write your own algorithms
@@ -933,6 +934,7 @@
              * @sample gantt/pathfinder/demo
              *         Pathfinder connections
              *
+             * @declare      Highcharts.ConnectorsOptions
              * @product      gantt
              * @optionparent connectors
              */
@@ -1023,7 +1025,8 @@
                  * this option is overridden by the `startMarker` and `endMarker`
                  * options.
                  *
-                 * @since 6.2.0
+                 * @declare Highcharts.ConnectorsMarkerOptions
+                 * @since   6.2.0
                  */
                 marker: {
                     /**
@@ -1098,6 +1101,7 @@
                  * Marker options specific to the start markers for this chart's
                  * Pathfinder connectors. Overrides the generic marker options.
                  *
+                 * @declare Highcharts.ConnectorsStartMarkerOptions
                  * @extends connectors.marker
                  * @since   6.2.0
                  */
@@ -1111,6 +1115,7 @@
                  * Marker options specific to the end markers for this chart's
                  * Pathfinder connectors. Overrides the generic marker options.
                  *
+                 * @declare Highcharts.ConnectorsEndMarkerOptions
                  * @extends connectors.marker
                  * @since   6.2.0
                  */
@@ -1126,6 +1131,7 @@
          * Override Pathfinder connector options for a series. Requires Highcharts Gantt
          * to be loaded.
          *
+         * @declare   Highcharts.SeriesConnectorsOptionsObject
          * @extends   connectors
          * @since     6.2.0
          * @excluding enabled, algorithmMargin
@@ -1133,19 +1139,20 @@
          * @apioption plotOptions.series.connectors
          */
         /**
-         * Connect to a point. Requires Highcharts Gantt to be loaded. This option can
-         * be either a string, referring to the ID of another point, or an object, or an
-         * array of either. If the option is an array, each element defines a
-         * connection.
+         * Connect to a point. This option can be either a string, referring to the ID
+         * of another point, or an object, or an array of either. If the option is an
+         * array, each element defines a connection.
          *
          * @sample gantt/pathfinder/demo
          *         Different connection types
          *
+         * @declare   Highcharts.XrangePointConnectorsOptionsObject
          * @type      {string|Array<string|*>|*}
          * @extends   plotOptions.series.connectors
          * @since     6.2.0
          * @excluding enabled
          * @product   gantt
+         * @requires  highcharts-gantt
          * @apioption series.xrange.data.connect
          */
         /**

@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v7.2.0 (2019-09-03)
+ * @license Highcharts JS v8.0.0 (2019-12-10)
  *
  * Highcharts funnel module
  *
@@ -28,7 +28,7 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'modules/funnel.src.js', [_modules['parts/Globals.js']], function (Highcharts) {
+    _registerModule(_modules, 'modules/funnel.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (Highcharts, U) {
         /* *
          *
          *  Highcharts funnel module
@@ -41,8 +41,9 @@
          *
          * */
         /* eslint indent: 0 */
+        var pick = U.pick;
         // create shortcuts
-        var seriesType = Highcharts.seriesType, seriesTypes = Highcharts.seriesTypes, fireEvent = Highcharts.fireEvent, noop = Highcharts.noop, pick = Highcharts.pick;
+        var seriesType = Highcharts.seriesType, seriesTypes = Highcharts.seriesTypes, fireEvent = Highcharts.fireEvent, addEvent = Highcharts.addEvent, noop = Highcharts.noop;
         /**
          * @private
          * @class
@@ -62,6 +63,7 @@
          * @extends      plotOptions.pie
          * @excluding    innerSize,size
          * @product      highcharts
+         * @requires     modules/funnel
          * @optionparent plotOptions.funnel
          */
         {
@@ -131,8 +133,8 @@
              */
             size: true,
             dataLabels: {
-                /** @ignore-option */
-                connectorWidth: 1
+                connectorWidth: 1,
+                verticalAlign: 'middle'
             },
             /**
              * Options for the series states.
@@ -289,7 +291,7 @@
                         y: y1,
                         topWidth: x2 - x1,
                         bottomWidth: x4 - x3,
-                        height: Math.abs(pick(y3, y5) - y1),
+                        height: Math.abs(pick(y5, y3) - y1),
                         width: NaN
                     };
                     // Slice is a noop on funnel points
@@ -357,7 +359,7 @@
                 seriesTypes[series.options.dataLabels.inside ? 'column' : 'pie'].prototype.drawDataLabels.call(this);
             },
             alignDataLabel: function (point, dataLabel, options, alignTo, isNew) {
-                var series = point.series, reversed = series.options.reversed, dlBox = point.dlBox || point.shapeArgs, align = options.align, verticalAlign = options.verticalAlign, centerY = series.center[1], pointPlotY = (reversed ?
+                var series = point.series, reversed = series.options.reversed, dlBox = point.dlBox || point.shapeArgs, align = options.align, verticalAlign = options.verticalAlign, inside = ((series.options || {}).dataLabels || {}).inside, centerY = series.center[1], pointPlotY = (reversed ?
                     2 * centerY - point.plotY :
                     point.plotY), widthAtLabel = series.getWidthAt(pointPlotY - dlBox.height / 2 +
                     dataLabel.height), offset = verticalAlign === 'middle' ?
@@ -388,14 +390,32 @@
                 };
                 options.verticalAlign = 'bottom';
                 // Call the parent method
-                Highcharts.Series.prototype.alignDataLabel.call(this, point, dataLabel, options, alignTo, isNew);
-                // If label was justified and we have contrast, set it:
-                if (options.inside && point.contrastColor) {
-                    dataLabel.css({
-                        color: point.contrastColor
-                    });
+                if (!inside || point.visible) {
+                    Highcharts.Series.prototype.alignDataLabel.call(this, point, dataLabel, options, alignTo, isNew);
+                }
+                if (inside) {
+                    if (!point.visible && point.dataLabel) {
+                        // Avoid animation from top
+                        point.dataLabel.placed = false;
+                    }
+                    // If label is inside and we have contrast, set it:
+                    if (point.contrastColor) {
+                        dataLabel.css({
+                            color: point.contrastColor
+                        });
+                    }
                 }
             }
+        });
+        /* eslint-disable no-invalid-this */
+        addEvent(Highcharts.Chart, 'afterHideAllOverlappingLabels', function () {
+            this.series.forEach(function (series) {
+                if (series instanceof seriesTypes.pie &&
+                    series.placeDataLabels &&
+                    !((series.options || {}).dataLabels || {}).inside) {
+                    series.placeDataLabels();
+                }
+            });
         });
         /**
          * A `funnel` series. If the [type](#series.funnel.type) option is
@@ -404,6 +424,7 @@
          * @extends   series,plotOptions.funnel
          * @excluding dataParser, dataURL, stack, xAxis, yAxis
          * @product   highcharts
+         * @requires  modules/funnel
          * @apioption series.funnel
          */
         /**
@@ -463,13 +484,14 @@
         seriesType('pyramid', 'funnel', 
         /**
          * A pyramid series is a special type of funnel, without neck and reversed
-         * by default. Requires the funnel module.
+         * by default.
          *
          * @sample highcharts/demo/pyramid/
          *         Pyramid chart
          *
          * @extends      plotOptions.funnel
          * @product      highcharts
+         * @requires     modules/funnel
          * @optionparent plotOptions.pyramid
          */
         {
@@ -502,6 +524,7 @@
          * @extends   series,plotOptions.pyramid
          * @excluding dataParser, dataURL, stack, xAxis, yAxis
          * @product   highcharts
+         * @requires  modules/funnel
          * @apioption series.pyramid
          */
         /**

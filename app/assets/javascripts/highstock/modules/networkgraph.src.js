@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v7.2.0 (2019-09-03)
+ * @license Highcharts JS v8.0.0 (2019-12-10)
  *
  * Force directed graph module
  *
@@ -34,8 +34,8 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var defined = U.defined;
-        var pick = H.pick, Point = H.Point;
+        var defined = U.defined, extend = U.extend, pick = U.pick;
+        var Point = H.Point;
         H.NodesMixin = {
             /* eslint-disable valid-jsdoc */
             /**
@@ -55,7 +55,7 @@
                 var node = findById(this.nodes, id), PointClass = this.pointClass, options;
                 if (!node) {
                     options = this.options.nodes && findById(this.options.nodes, id);
-                    node = (new PointClass()).init(this, H.extend({
+                    node = (new PointClass()).init(this, extend({
                         className: 'highcharts-node',
                         isNode: true,
                         id: id,
@@ -131,7 +131,7 @@
                 this.nodes.forEach(function (node) {
                     node.linksFrom.length = 0;
                     node.linksTo.length = 0;
-                    node.level = undefined;
+                    node.level = node.options.level;
                 });
                 // Create the node list and set up links
                 this.points.forEach(function (point) {
@@ -513,22 +513,15 @@
                  *
                  * Euler:
                  *
-                 * Basic form:
-                 * `x(n+1) = x(n) + v(n)`
+                 * Basic form: `x(n+1) = x(n) + v(n)`
                  *
                  * With Rengoild-Fruchterman we get:
-                 * <pre>
-                 *       x(n+1) = x(n) +
-                 *           v(n) / length(v(n)) *
-                 *           min(v(n), temperature(n))
-                 * </pre>
+                 * `x(n+1) = x(n) + v(n) / length(v(n)) * min(v(n), temperature(n))`
                  * where:
-                 * <pre>
-                 *       x(n+1) - next position
-                 *       x(n) - current position
-                 *       v(n) - velocity (comes from net force)
-                 *       temperature(n) - current temperature
-                 * </pre>
+                 * - `x(n+1)`: next position
+                 * - `x(n)`: current position
+                 * - `v(n)`: velocity (comes from net force)
+                 * - `temperature(n)`: current temperature
                  *
                  * Known issues:
                  * Oscillations when force vector has the same magnitude but opposite
@@ -577,7 +570,7 @@
         };
 
     });
-    _registerModule(_modules, 'modules/networkgraph/QuadTree.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'modules/networkgraph/QuadTree.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
         /* *
          *
          *  Networkgraph series
@@ -589,6 +582,7 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
+        var extend = U.extend;
         /* eslint-disable no-invalid-this, valid-jsdoc */
         /**
          * The QuadTree node class. Used in Networkgraph chart as a base for Barnes-Hut
@@ -649,7 +643,7 @@
              */
             this.isEmpty = true;
         };
-        H.extend(QuadTreeNode.prototype, 
+        extend(QuadTreeNode.prototype, 
         /** @lends Highcharts.QuadTreeNode.prototype */
         {
             /**
@@ -748,8 +742,7 @@
              * divide the available space into another four quadrants.
              *
              * Indexes of quadrants are:
-             *
-             * <pre>
+             * ```
              * -------------               -------------
              * |           |               |     |     |
              * |           |               |  0  |  1  |
@@ -759,7 +752,7 @@
              * |           |               |  3  |  2  |
              * |           |               |     |     |
              * -------------               -------------
-             * </pre>
+             * ```
              */
             divideBox: function () {
                 var halfWidth = this.box.width / 2, halfHeight = this.box.height / 2;
@@ -794,7 +787,7 @@
             },
             /**
              * Determine which of the quadrants should be used when placing node in
-             * the QuadTree. Returned index is always in range `<0, 3>`.
+             * the QuadTree. Returned index is always in range `< 0 , 3 >`.
              *
              * @param {Highcharts.Point} point
              * @return {number}
@@ -851,7 +844,7 @@
             this.root.isRoot = true;
             this.root.divideBox();
         };
-        H.extend(QuadTree.prototype, 
+        extend(QuadTree.prototype, 
         /** @lends Highcharts.QuadTree.prototype */
         {
             /**
@@ -868,13 +861,13 @@
              * Depfth first treversal (DFS). Using `before` and `after` callbacks,
              * we can get two results: preorder and postorder traversals, reminder:
              *
-             * <pre>
+             * ```
              *     (a)
              *     / \
              *   (b) (c)
              *   / \
              * (d) (e)
-             * </pre>
+             * ```
              *
              * DFS (preorder): `a -> b -> d -> e -> c`
              *
@@ -940,15 +933,17 @@
          *
          *  License: www.highcharts.com/license
          *
+         *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
+         *
          * */
-        var defined = U.defined;
-        var pick = H.pick, addEvent = H.addEvent, Chart = H.Chart;
+        var clamp = U.clamp, defined = U.defined, extend = U.extend, pick = U.pick, setAnimation = U.setAnimation;
+        var addEvent = H.addEvent, Chart = H.Chart;
         /* eslint-disable no-invalid-this, valid-jsdoc */
         H.layouts = {
             'reingold-fruchterman': function () {
             }
         };
-        H.extend(
+        extend(
         /**
          * Reingold-Fruchterman algorithm from
          * "Graph Drawing by Force-directed Placement" paper.
@@ -1242,7 +1237,7 @@
                             // Node can not repulse itself:
                             node !== repNode &&
                                 // Only close nodes affect each other:
-                                /* layout.getDistR(node, repNode) < 2 * k && */
+                                // layout.getDistR(node, repNode) < 2 * k &&
                                 // Not dragged:
                                 !node.fixedPosition) {
                                 distanceXY = layout.getDistXY(node, repNode);
@@ -1322,9 +1317,9 @@
 
                 */
                 // Limit X-coordinates:
-                node.plotX = Math.max(Math.min(node.plotX, box.width - radius), box.left + radius);
+                node.plotX = clamp(node.plotX, box.left + radius, box.width - radius);
                 // Limit Y-coordinates:
-                node.plotY = Math.max(Math.min(node.plotY, box.height - radius), box.top + radius);
+                node.plotY = clamp(node.plotY, box.top + radius, box.height - radius);
             },
             /**
              * From "A comparison of simulated annealing cooling strategies" by
@@ -1409,7 +1404,7 @@
                 }
             }
             if (this.graphLayoutsLookup) {
-                H.setAnimation(false, this);
+                setAnimation(false, this);
                 // Start simulation
                 this.graphLayoutsLookup.forEach(function (layout) {
                     layout.start();
@@ -1628,53 +1623,8 @@
         * @type {string}
         * @since 7.0.0
         */
-        /**
-         * Data labels options
-         *
-         * @interface Highcharts.SeriesNetworkgraphDataLabelsOptionsObject
-         * @extends Highcharts.DataLabelsOptionsObject
-         * @since 7.0.0
-         */ /**
-        * The
-        * [format string](https://www.highcharts.com/docs/chart-concepts/labels-and-string-formatting)
-        * specifying what to show for _node_ in the networkgraph. In v7.0 defaults to
-        * `{key}`, since v7.1 defaults to `undefined` and `formatter` is used instead.
-        * @name Highcharts.SeriesNetworkgraphDataLabelsOptionsObject#format
-        * @type {string|undefined}
-        * @since 7.0.0
-        */ /**
-        * Callback JavaScript function to format the data label for a node. Note that
-        * if a `format` is defined, the format takes precedence and the formatter is
-        * ignored.
-        * @name Highcharts.SeriesNetworkgraphDataLabelsOptionsObject#formatter
-        * @type {Highcharts.SeriesNetworkgraphDataLabelsFormatterCallbackFunction|undefined}
-        * @since 7.0.0
-        */ /**
-        * The
-        * [format string](https://www.highcharts.com/docs/chart-concepts/labels-and-string-formatting)
-        * specifying what to show for _links_ in the networkgraph. (Default:
-        * `undefined`)
-        * @name Highcharts.SeriesNetworkgraphDataLabelsOptionsObject#linkFormat
-        * @type {string|undefined}
-        * @since 7.1.0
-        */ /**
-        * Callback to format data labels for _links_ in the sankey diagram. The
-        * `linkFormat` option takes precedence over the `linkFormatter`.
-        * @name Highcharts.SeriesNetworkgraphDataLabelsOptionsObject#linkFormatter
-        * @type {Highcharts.SeriesNetworkgraphDataLabelsFormatterCallbackFunction|undefined}
-        * @since 7.1.0
-        */ /**
-        * Options for a _link_ label text which should follow link connection. Border
-        * and background are disabled for a label that follows a path.
-        * **Note:** Only SVG-based renderer supports this option. Setting `useHTML` to
-        * true will disable this option.
-        * @see {@link Highcharts.SeriesNetworkDataLabelsTextPath#textPath}
-        * @name Highcharts.SeriesNetworkgraphDataLabelsOptionsObject#linkTextPath
-        * @type {Highcharts.DataLabelsTextPathOptionsObject|undefined}
-        * @since 7.1.0
-        */
-        var defined = U.defined;
-        var addEvent = H.addEvent, seriesType = H.seriesType, seriesTypes = H.seriesTypes, pick = H.pick, Point = H.Point, Series = H.Series, dragNodesMixin = H.dragNodesMixin;
+        var defined = U.defined, pick = U.pick;
+        var addEvent = H.addEvent, seriesType = H.seriesType, seriesTypes = H.seriesTypes, Point = H.Point, Series = H.Series, dragNodesMixin = H.dragNodesMixin;
         /**
          * @private
          * @class
@@ -1698,6 +1648,7 @@
          *               pointInterval, pointIntervalUnit, pointPlacement,
          *               pointStart, softThreshold, stack, stacking, step,
          *               threshold, xAxis, yAxis, zoneAxis
+         * @requires     modules/networkgraph
          * @optionparent plotOptions.networkgraph
          */
         {
@@ -1713,13 +1664,12 @@
                     /**
                      * The opposite state of a hover for a single point node.
                      * Applied to all not connected nodes to the hovered one.
+                     *
+                     * @declare Highcharts.PointStatesInactiveOptionsObject
                      */
                     inactive: {
                         /**
                          * Opacity of inactive markers.
-                         *
-                         * @apioption plotOptions.series.marker.states.inactive.opacity
-                         * @type {number}
                          */
                         opacity: 0.3,
                         /**
@@ -1728,6 +1678,7 @@
                          * @type {boolean|Highcharts.AnimationOptionsObject}
                          */
                         animation: {
+                            /** @internal */
                             duration: 50
                         }
                     }
@@ -1737,6 +1688,8 @@
                 /**
                  * The opposite state of a hover for a single point link. Applied
                  * to all links that are not comming from the hovered node.
+                 *
+                 * @declare Highcharts.SeriesStatesInactiveOptionsObject
                  */
                 inactive: {
                     /**
@@ -1749,6 +1702,7 @@
                      * @type {boolean|Highcharts.AnimationOptionsObject}
                      */
                     animation: {
+                        /** @internal */
                         duration: 50
                     }
                 }
@@ -1763,32 +1717,73 @@
              * @sample highcharts/series-networkgraph/link-datalabels
              *         Data labels moved under the links
              *
-             * @type    {Highcharts.SeriesNetworkgraphDataLabelsOptionsObject|Array<Highcharts.SeriesNetworkgraphDataLabelsOptionsObject>}
-             * @default {"formatter": function () { return this.key; }, "linkFormatter": function () { return this.point.fromNode.name + "<br>" + this.point.toNode.name; }, "linkTextPath": {"enabled": true}, "textPath": {"enabled": false}}
+             * @declare Highcharts.SeriesNetworkgraphDataLabelsOptionsObject
              *
              * @private
              */
             dataLabels: {
+                /**
+                 * The
+                 * [format string](https://www.highcharts.com/docs/chart-concepts/labels-and-string-formatting)
+                 * specifying what to show for _node_ in the networkgraph. In v7.0
+                 * defaults to `{key}`, since v7.1 defaults to `undefined` and
+                 * `formatter` is used instead.
+                 *
+                 * @type      {string}
+                 * @since     7.0.0
+                 * @apioption plotOptions.networkgraph.dataLabels.format
+                 */
                 // eslint-disable-next-line valid-jsdoc
-                /** @ignore-option */
+                /**
+                 * Callback JavaScript function to format the data label for a node.
+                 * Note that if a `format` is defined, the format takes precedence
+                 * and the formatter is ignored.
+                 *
+                 * @type  {Highcharts.SeriesNetworkgraphDataLabelsFormatterCallbackFunction}
+                 * @since 7.0.0
+                 */
                 formatter: function () {
                     return this.key;
                 },
+                /**
+                 * The
+                 * [format string](https://www.highcharts.com/docs/chart-concepts/labels-and-string-formatting)
+                 * specifying what to show for _links_ in the networkgraph.
+                 * (Default: `undefined`)
+                 *
+                 * @type      {string}
+                 * @since     7.1.0
+                 * @apioption plotOptions.networkgraph.dataLabels.linkFormat
+                 */
                 // eslint-disable-next-line valid-jsdoc
-                /** @ignore-option */
+                /**
+                 * Callback to format data labels for _links_ in the sankey diagram.
+                 * The `linkFormat` option takes precedence over the
+                 * `linkFormatter`.
+                 *
+                 * @type  {Highcharts.SeriesNetworkgraphDataLabelsFormatterCallbackFunction}
+                 * @since 7.1.0
+                 */
                 linkFormatter: function () {
                     return (this.point.fromNode.name +
                         '<br>' +
                         this.point.toNode.name);
                 },
-                /** @ignore-option */
+                /**
+                 * Options for a _link_ label text which should follow link
+                 * connection. Border and background are disabled for a label that
+                 * follows a path.
+                 *
+                 * **Note:** Only SVG-based renderer supports this option. Setting
+                 * `useHTML` to true will disable this option.
+                 *
+                 * @extends plotOptions.networkgraph.dataLabels.textPath
+                 * @since   7.1.0
+                 */
                 linkTextPath: {
-                    /** @ignore-option */
                     enabled: true
                 },
-                /** @ignore-option */
                 textPath: {
-                    /** @ignore-option */
                     enabled: false
                 }
             },
@@ -2519,6 +2514,7 @@
          *            pointPlacement, pointStart, softThreshold, stack, stacking,
          *            step, threshold, xAxis, yAxis, zoneAxis
          * @product   highcharts
+         * @requires  modules/networkgraph
          * @apioption series.networkgraph
          */
         /**
