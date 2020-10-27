@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.2.2 (2020-10-22)
  *
  * Debugger module
  *
@@ -28,7 +28,7 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'error-messages.js', [_modules['parts/Globals.js']], function (H) {
+    _registerModule(_modules, 'error-messages.js', [_modules['Core/Globals.js']], function (H) {
         /* eslint-disable */
         /* *
          * Error information for the debugger module
@@ -132,6 +132,10 @@
                 "title": "Non-unique point or node id",
                 "text": "<h1>Non-unique point or node id</h1><p>This error occurs when using the same <code>id</code> for two or more points or nodes.</p>"
             },
+            "32": {
+                "title": "Deprecated function or property",
+                "text": "<h1>Deprecated function or property</h1><p>This error occurs when using a deprecated function or property. Consult the <a href=\"https://api.highcharts.com/\">API documentation</a> for alternatives, if no replacement is mentioned by the error itself.</p>"
+            },
             "meta": {
                 "files": [
                     "errors/10/readme.md",
@@ -156,24 +160,26 @@
                     "errors/28/readme.md",
                     "errors/29/readme.md",
                     "errors/30/readme.md",
-                    "errors/31/readme.md"
+                    "errors/31/readme.md",
+                    "errors/32/readme.md"
                 ]
             }
         };
 
     });
-    _registerModule(_modules, 'modules/debugger.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'Extensions/Debugger.js', [_modules['Core/Globals.js'], _modules['Core/Chart/Chart.js'], _modules['Core/Utilities.js']], function (H, Chart, U) {
         /* *
          *
-         *  (c) 2010-2019 Torstein Honsi
+         *  (c) 2010-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var isNumber = U.isNumber;
-        var addEvent = H.addEvent, setOptions = H.setOptions, each = H.each;
+        var addEvent = U.addEvent,
+            isNumber = U.isNumber,
+            setOptions = U.setOptions;
         setOptions({
             /**
              * @optionparent chart
@@ -193,10 +199,16 @@
             }
         });
         /* eslint-disable no-invalid-this */
-        addEvent(H.Chart, 'displayError', function (e) {
-            var chart = this, code = e.code, msg, options = chart.options.chart, renderer = chart.renderer, chartWidth, chartHeight;
+        addEvent(Chart, 'displayError', function (e) {
+            var chart = this,
+                code = e.code,
+                msg,
+                options = chart.options.chart,
+                renderer = chart.renderer,
+                chartWidth,
+                chartHeight;
             if (chart.errorElements) {
-                each(chart.errorElements, function (el) {
+                (chart.errorElements).forEach(function (el) {
                     if (el) {
                         el.destroy();
                     }
@@ -223,7 +235,7 @@
                 // Render error message
                 chart.errorElements[1] = renderer.label(msg, 0, 0, 'rect', void 0, void 0, void 0, void 0, 'debugger').css({
                     color: '#ffffff',
-                    width: chartWidth - 16,
+                    width: (chartWidth - 16) + 'px',
                     padding: 0
                 }).attr({
                     fill: 'rgba(255, 0, 0, 0.9)',
@@ -236,10 +248,10 @@
                 });
             }
         });
-        addEvent(H.Chart, 'beforeRedraw', function () {
+        addEvent(Chart, 'beforeRedraw', function () {
             var errorElements = this.errorElements;
             if (errorElements && errorElements.length) {
-                each(errorElements, function (el) {
+                errorElements.forEach(function (el) {
                     el.destroy();
                 });
             }

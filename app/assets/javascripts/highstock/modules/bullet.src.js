@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.2.2 (2020-10-22)
  *
  * Bullet graph series type for Highcharts
  *
@@ -28,18 +28,21 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'modules/bullet.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'Series/BulletSeries.js', [_modules['Core/Series/Series.js'], _modules['Core/Utilities.js']], function (BaseSeries, U) {
         /* *
          *
-         *  (c) 2010-2019 Kacper Madej
+         *  (c) 2010-2020 Kacper Madej
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var isNumber = U.isNumber, pick = U.pick, relativeLength = U.relativeLength;
-        var seriesType = H.seriesType, columnProto = H.seriesTypes.column.prototype;
+        var isNumber = U.isNumber,
+            merge = U.merge,
+            pick = U.pick,
+            relativeLength = U.relativeLength;
+        var columnProto = BaseSeries.seriesTypes.column.prototype;
         /**
          * The bullet series type.
          *
@@ -49,7 +52,7 @@
          *
          * @augments Highcharts.Series
          */
-        seriesType('bullet', 'column'
+        BaseSeries.seriesType('bullet', 'column'
         /**
          * A bullet graph is a variation of a bar graph. The bullet graph features
          * a single measure, compares it to a target, and displays it in the context
@@ -62,7 +65,8 @@
          * @extends      plotOptions.column
          * @since        6.0.0
          * @product      highcharts
-         * @excluding    allAreas, boostThreshold, colorAxis, compare, compareBase
+         * @excluding    allAreas, boostThreshold, colorAxis, compare, compareBase,
+         *               dataSorting, boostBlending
          * @requires     modules/bullet
          * @optionparent plotOptions.bullet
          */
@@ -140,12 +144,24 @@
              * @function Highcharts.Series#drawPoints
              */
             drawPoints: function () {
-                var series = this, chart = series.chart, options = series.options, animationLimit = options.animationLimit || 250;
+                var series = this,
+                    chart = series.chart,
+                    options = series.options,
+                    animationLimit = options.animationLimit || 250;
                 columnProto.drawPoints.apply(this);
                 series.points.forEach(function (point) {
-                    var pointOptions = point.options, shapeArgs, targetGraphic = point.targetGraphic, targetShapeArgs, targetVal = point.target, pointVal = point.y, width, height, targetOptions, y;
+                    var pointOptions = point.options,
+                        shapeArgs,
+                        targetGraphic = point.targetGraphic,
+                        targetShapeArgs,
+                        targetVal = point.target,
+                        pointVal = point.y,
+                        width,
+                        height,
+                        targetOptions,
+                        y;
                     if (isNumber(targetVal) && targetVal !== null) {
-                        targetOptions = H.merge(options.targetOptions, pointOptions.targetOptions);
+                        targetOptions = merge(options.targetOptions, pointOptions.targetOptions);
                         height = targetOptions.height;
                         shapeArgs = point.shapeArgs;
                         width = relativeLength(targetOptions.width, shapeArgs.width);
@@ -216,15 +232,23 @@
              * @function Highcharts.Series#getExtremes
              */
             getExtremes: function (yData) {
-                var series = this, targetData = series.targetData, yMax, yMin;
-                columnProto.getExtremes.call(this, yData);
+                var series = this,
+                    targetData = series.targetData,
+                    yMax,
+                    yMin;
+                var dataExtremes = columnProto.getExtremes.call(this,
+                    yData);
                 if (targetData && targetData.length) {
-                    yMax = series.dataMax;
-                    yMin = series.dataMin;
-                    columnProto.getExtremes.call(this, targetData);
-                    series.dataMax = Math.max(series.dataMax, yMax);
-                    series.dataMin = Math.min(series.dataMin, yMin);
+                    var targetExtremes = columnProto.getExtremes.call(this,
+                        targetData);
+                    if (isNumber(targetExtremes.dataMin)) {
+                        dataExtremes.dataMin = Math.min(pick(dataExtremes.dataMin, Infinity), targetExtremes.dataMin);
+                    }
+                    if (isNumber(targetExtremes.dataMax)) {
+                        dataExtremes.dataMax = Math.max(pick(dataExtremes.dataMax, -Infinity), targetExtremes.dataMax);
+                    }
                 }
+                return dataExtremes;
             }
             /* eslint-enable valid-jsdoc */
         }, 
@@ -253,7 +277,8 @@
          * @extends   series,plotOptions.bullet
          * @since     6.0.0
          * @product   highcharts
-         * @excluding dataParser, dataURL, marker
+         * @excluding dataParser, dataURL, marker, dataSorting, boostThreshold,
+         *            boostBlending
          * @requires  modules/bullet
          * @apioption series.bullet
          */

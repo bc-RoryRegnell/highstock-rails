@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.2.2 (2020-10-22)
  * Organization chart series type
  *
  * (c) 2019-2019 Torstein Honsi
@@ -27,19 +27,22 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'modules/organization.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'Series/OrganizationSeries.js', [_modules['Core/Series/Series.js'], _modules['Core/Globals.js'], _modules['Core/Utilities.js']], function (BaseSeries, H, U) {
         /* *
          *
          *  Organization chart module
          *
-         *  (c) 2018-2019 Torstein Honsi
+         *  (c) 2018-2020 Torstein Honsi
          *
          *  License: www.highcharts.com/license
          *
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var pick = U.pick, wrap = U.wrap;
+        var css = U.css,
+            pick = U.pick,
+            wrap = U.wrap;
+        var base = BaseSeries.seriesTypes.sankey.prototype;
         /**
          * Layout value for the child nodes in an organization chart. If `hanging`, this
          * node's children will hang below their parent, allowing a tighter packing of
@@ -47,7 +50,7 @@
          *
          * @typedef {"normal"|"hanging"} Highcharts.SeriesOrganizationNodesLayoutValue
          */
-        var base = H.seriesTypes.sankey.prototype;
+        ''; // detach doclets above
         /**
          * @private
          * @class
@@ -55,7 +58,7 @@
          *
          * @augments Highcharts.seriesTypes.sankey
          */
-        H.seriesType('organization', 'sankey', 
+        BaseSeries.seriesType('organization', 'sankey', 
         /**
          * An organization chart is a diagram that shows the structure of an
          * organization and the relationships and relative ranks of its parts and
@@ -71,7 +74,7 @@
          *               Centered layout
          *
          * @extends      plotOptions.sankey
-         * @excluding    allowPointSelect, curveFactor
+         * @excluding    allowPointSelect, curveFactor, dataSorting
          * @since        7.1.0
          * @product      highcharts
          * @requires     modules/organization
@@ -127,28 +130,33 @@
                  */
                 nodeFormatter: function () {
                     var outerStyle = {
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        'flex-direction': 'row',
-                        'align-items': 'center',
-                        'justify-content': 'center'
-                    }, imageStyle = {
-                        'max-height': '100%',
-                        'border-radius': '50%'
-                    }, innerStyle = {
-                        width: '100%',
-                        padding: 0,
-                        'text-align': 'center',
-                        'white-space': 'normal'
-                    }, nameStyle = {
-                        margin: 0
-                    }, titleStyle = {
-                        margin: 0
-                    }, descriptionStyle = {
-                        opacity: 0.75,
-                        margin: '5px'
-                    };
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            'flex-direction': 'row',
+                            'align-items': 'center',
+                            'justify-content': 'center'
+                        },
+                        imageStyle = {
+                            'max-height': '100%',
+                            'border-radius': '50%'
+                        },
+                        innerStyle = {
+                            width: '100%',
+                            padding: 0,
+                            'text-align': 'center',
+                            'white-space': 'normal'
+                        },
+                        nameStyle = {
+                            margin: 0
+                        },
+                        titleStyle = {
+                            margin: 0
+                        },
+                        descriptionStyle = {
+                            opacity: 0.75,
+                            margin: '5px'
+                        };
                     // eslint-disable-next-line valid-jsdoc
                     /**
                      * @private
@@ -238,8 +246,8 @@
         }, {
             pointAttribs: function (point, state) {
                 var series = this, attribs = base.pointAttribs.call(series, point, state), level = point.isNode ? point.level : point.fromNode.level, levelOptions = series.mapOptionsToLevel[level || 0] || {}, options = point.options, stateOptions = (levelOptions.states && levelOptions.states[state]) || {}, values = ['borderRadius', 'linkColor', 'linkLineWidth']
-                    .reduce(function (obj, key) {
-                    obj[key] = pick(stateOptions[key], options[key], levelOptions[key], series.options[key]);
+                        .reduce(function (obj, key) {
+                        obj[key] = pick(stateOptions[key], options[key], levelOptions[key], series.options[key]);
                     return obj;
                 }, {});
                 if (!point.isNode) {
@@ -256,7 +264,8 @@
             },
             createNode: function (id) {
                 var node = base.createNode
-                    .call(this, id);
+                        .call(this,
+                    id);
                 // All nodes in an org chart are equal width
                 node.getSum = function () {
                     return 1;
@@ -268,12 +277,14 @@
                 // Wrap the offset function so that the hanging node's children are
                 // aligned to their parent
                 wrap(column, 'offset', function (proceed, node, factor) {
-                    var offset = proceed.call(this, node, factor); // eslint-disable-line no-invalid-this
-                    // Modify the default output if the parent's layout is 'hanging'
-                    if (node.hangsFrom) {
-                        return {
-                            absoluteTop: node.hangsFrom.nodeY
-                        };
+                    var offset = proceed.call(this,
+                        node,
+                        factor); // eslint-disable-line no-invalid-this
+                        // Modify the default output if the parent's layout is 'hanging'
+                        if (node.hangsFrom) {
+                            return {
+                                absoluteTop: node.hangsFrom.nodeY
+                            };
                     }
                     return offset;
                 });
@@ -295,42 +306,76 @@
             // General function to apply corner radius to a path - can be lifted to
             // renderer or utilities if we need it elsewhere.
             curvedPath: function (path, r) {
-                var d = [], i, x, y, x1, x2, y1, y2, directionX, directionY;
-                for (i = 0; i < path.length; i++) {
-                    x = path[i][0];
-                    y = path[i][1];
-                    // moveTo
-                    if (i === 0) {
-                        d.push('M', x, y);
-                    }
-                    else if (i === path.length - 1) {
-                        d.push('L', x, y);
-                        // curveTo
-                    }
-                    else if (r) {
-                        x1 = path[i - 1][0];
-                        y1 = path[i - 1][1];
-                        x2 = path[i + 1][0];
-                        y2 = path[i + 1][1];
-                        // Only apply to breaks
-                        if (x1 !== x2 && y1 !== y2) {
-                            directionX = x1 < x2 ? 1 : -1;
-                            directionY = y1 < y2 ? 1 : -1;
-                            d.push('L', x - directionX * Math.min(Math.abs(x - x1), r), y - directionY * Math.min(Math.abs(y - y1), r), 'C', x, y, x, y, x + directionX * Math.min(Math.abs(x - x2), r), y + directionY * Math.min(Math.abs(y - y2), r));
+                var d = [];
+                for (var i = 0; i < path.length; i++) {
+                    var x = path[i][1];
+                    var y = path[i][2];
+                    if (typeof x === 'number' && typeof y === 'number') {
+                        // moveTo
+                        if (i === 0) {
+                            d.push(['M', x, y]);
                         }
-                        // lineTo
-                    }
-                    else {
-                        d.push('L', x, y);
+                        else if (i === path.length - 1) {
+                            d.push(['L', x, y]);
+                            // curveTo
+                        }
+                        else if (r) {
+                            var prevSeg = path[i - 1];
+                            var nextSeg = path[i + 1];
+                            if (prevSeg && nextSeg) {
+                                var x1 = prevSeg[1],
+                                    y1 = prevSeg[2],
+                                    x2 = nextSeg[1],
+                                    y2 = nextSeg[2];
+                                // Only apply to breaks
+                                if (typeof x1 === 'number' &&
+                                    typeof x2 === 'number' &&
+                                    typeof y1 === 'number' &&
+                                    typeof y2 === 'number' &&
+                                    x1 !== x2 &&
+                                    y1 !== y2) {
+                                    var directionX = x1 < x2 ? 1 : -1,
+                                        directionY = y1 < y2 ? 1 : -1;
+                                    d.push([
+                                        'L',
+                                        x - directionX * Math.min(Math.abs(x - x1), r),
+                                        y - directionY * Math.min(Math.abs(y - y1), r)
+                                    ], [
+                                        'C',
+                                        x,
+                                        y,
+                                        x,
+                                        y,
+                                        x + directionX * Math.min(Math.abs(x - x2), r),
+                                        y + directionY * Math.min(Math.abs(y - y2), r)
+                                    ]);
+                                }
+                            }
+                            // lineTo
+                        }
+                        else {
+                            d.push(['L', x, y]);
+                        }
                     }
                 }
                 return d;
             },
             translateLink: function (point) {
-                var fromNode = point.fromNode, toNode = point.toNode, crisp = Math.round(this.options.linkLineWidth) % 2 / 2, x1 = Math.floor(fromNode.shapeArgs.x +
-                    fromNode.shapeArgs.width) + crisp, y1 = Math.floor(fromNode.shapeArgs.y +
-                    fromNode.shapeArgs.height / 2) + crisp, x2 = Math.floor(toNode.shapeArgs.x) + crisp, y2 = Math.floor(toNode.shapeArgs.y +
-                    toNode.shapeArgs.height / 2) + crisp, xMiddle, hangingIndent = this.options.hangingIndent, toOffset = toNode.options.offset, percentOffset = /%$/.test(toOffset) && parseInt(toOffset, 10), inverted = this.chart.inverted;
+                var fromNode = point.fromNode,
+                    toNode = point.toNode,
+                    crisp = Math.round(this.options.linkLineWidth) % 2 / 2,
+                    x1 = Math.floor(fromNode.shapeArgs.x +
+                        fromNode.shapeArgs.width) + crisp,
+                    y1 = Math.floor(fromNode.shapeArgs.y +
+                        fromNode.shapeArgs.height / 2) + crisp,
+                    x2 = Math.floor(toNode.shapeArgs.x) + crisp,
+                    y2 = Math.floor(toNode.shapeArgs.y +
+                        toNode.shapeArgs.height / 2) + crisp,
+                    xMiddle,
+                    hangingIndent = this.options.hangingIndent,
+                    toOffset = toNode.options.offset,
+                    percentOffset = /%$/.test(toOffset) && parseInt(toOffset, 10),
+                    inverted = this.chart.inverted;
                 if (inverted) {
                     x1 -= fromNode.shapeArgs.width;
                     x2 += toNode.shapeArgs.width;
@@ -368,18 +413,20 @@
                 point.shapeType = 'path';
                 point.shapeArgs = {
                     d: this.curvedPath([
-                        [x1, y1],
-                        [xMiddle, y1],
-                        [xMiddle, y2],
-                        [x2, y2]
+                        ['M', x1, y1],
+                        ['L', xMiddle, y1],
+                        ['L', xMiddle, y2],
+                        ['L', x2, y2]
                     ], this.options.linkRadius)
                 };
             },
             alignDataLabel: function (point, dataLabel, options) {
                 // Align the data label to the point graphic
                 if (options.useHTML) {
-                    var width = point.shapeArgs.width, height = point.shapeArgs.height, padjust = (this.options.borderWidth +
-                        2 * this.options.dataLabels.padding);
+                    var width = point.shapeArgs.width,
+                        height = point.shapeArgs.height,
+                        padjust = (this.options.borderWidth +
+                            2 * this.options.dataLabels.padding);
                     if (this.chart.inverted) {
                         width = height;
                         height = point.shapeArgs.width;
@@ -387,18 +434,21 @@
                     height -= padjust;
                     width -= padjust;
                     // Set the size of the surrounding div emulating `g`
-                    H.css(dataLabel.text.element.parentNode, {
-                        width: width + 'px',
-                        height: height + 'px'
-                    });
-                    // Set properties for the span emulating `text`
-                    H.css(dataLabel.text.element, {
-                        left: 0,
-                        top: 0,
-                        width: '100%',
-                        height: '100%',
-                        overflow: 'hidden'
-                    });
+                    var text = dataLabel.text;
+                    if (text) {
+                        css(text.element.parentNode, {
+                            width: width + 'px',
+                            height: height + 'px'
+                        });
+                        // Set properties for the span emulating `text`
+                        css(text.element, {
+                            left: 0,
+                            top: 0,
+                            width: '100%',
+                            height: '100%',
+                            overflow: 'hidden'
+                        });
+                    }
                     // The getBBox function is used in `alignDataLabel` to align
                     // inside the box
                     dataLabel.getBBox = function () {
@@ -407,6 +457,9 @@
                             height: height
                         };
                     };
+                    // Overwrite dataLabel dimensions (#13100).
+                    dataLabel.width = width;
+                    dataLabel.height = height;
                 }
                 H.seriesTypes.column.prototype.alignDataLabel.apply(this, arguments);
             }
@@ -416,7 +469,9 @@
          * not specified, it is inherited from [chart.type](#chart.type).
          *
          * @extends   series,plotOptions.organization
+         * @exclude   dataSorting, boostThreshold, boostBlending
          * @product   highcharts
+         * @requires  modules/sankey
          * @requires  modules/organization
          * @apioption series.organization
          */

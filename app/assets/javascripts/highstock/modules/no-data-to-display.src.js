@@ -1,5 +1,5 @@
 /**
- * @license Highcharts JS v8.0.0 (2019-12-10)
+ * @license Highcharts JS v8.2.2 (2020-10-22)
  *
  * Plugin for displaying a message when there is no data visible in chart.
  *
@@ -29,12 +29,12 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'modules/no-data-to-display.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'Extensions/NoDataToDisplay.js', [_modules['Core/Chart/Chart.js'], _modules['Core/Utilities.js']], function (Chart, U) {
         /* *
          *
          *  Plugin for displaying a message when there is no data visible in chart.
          *
-         *  (c) 2010-2019 Highsoft AS
+         *  (c) 2010-2020 Highsoft AS
          *
          *  Author: Oystein Moseng
          *
@@ -43,8 +43,12 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var extend = U.extend;
-        var chartPrototype = H.Chart.prototype, defaultOptions = H.getOptions();
+        var addEvent = U.addEvent,
+            extend = U.extend,
+            getOptions = U.getOptions,
+            merge = U.merge;
+        var chartPrototype = Chart.prototype,
+            defaultOptions = getOptions();
         // Add language option
         extend(defaultOptions.lang, 
         /**
@@ -157,17 +161,22 @@
          * @requires modules/no-data-to-display
          */
         chartPrototype.showNoData = function (str) {
-            var chart = this, options = chart.options, text = str || (options && options.lang.noData), noDataOptions = options && options.noData;
-            if (!chart.noDataLabel && chart.renderer) {
-                chart.noDataLabel = chart.renderer
-                    .label(text, 0, 0, null, null, null, noDataOptions.useHTML, null, 'no-data');
+            var chart = this,
+                options = chart.options,
+                text = str || (options && options.lang.noData),
+                noDataOptions = options && (options.noData || {});
+            if (chart.renderer) { // Meaning chart is not destroyed
+                if (!chart.noDataLabel) {
+                    chart.noDataLabel = chart.renderer
+                        .label(text, 0, 0, void 0, void 0, void 0, noDataOptions.useHTML, void 0, 'no-data')
+                        .add();
+                }
                 if (!chart.styledMode) {
                     chart.noDataLabel
                         .attr(noDataOptions.attr)
-                        .css(noDataOptions.style);
+                        .css(noDataOptions.style || {});
                 }
-                chart.noDataLabel.add();
-                chart.noDataLabel.align(extend(chart.noDataLabel.getBBox(), noDataOptions.position), false, 'plotBox');
+                chart.noDataLabel.align(extend(chart.noDataLabel.getBBox(), noDataOptions.position || {}), false, 'plotBox');
             }
         };
         /**
@@ -194,7 +203,9 @@
          * @requires modules/no-data-to-display
          */
         chartPrototype.hasData = function () {
-            var chart = this, series = chart.series || [], i = series.length;
+            var chart = this,
+                series = chart.series || [],
+                i = series.length;
             while (i--) {
                 if (series[i].hasData() && !series[i].options.isInternal) {
                     return true;
@@ -204,7 +215,7 @@
         };
         /* eslint-disable no-invalid-this */
         // Add event listener to handle automatic show or hide no-data message.
-        H.addEvent(H.Chart, 'render', function handleNoData() {
+        addEvent(Chart, 'render', function handleNoData() {
             if (this.hasData()) {
                 this.hideNoData();
             }

@@ -1,5 +1,5 @@
 /**
- * @license Highmaps JS v8.0.0 (2019-12-10)
+ * @license Highmaps JS v8.2.2 (2020-10-22)
  *
  * Tilemap module
  *
@@ -28,7 +28,7 @@
             obj[path] = fn.apply(null, args);
         }
     }
-    _registerModule(_modules, 'modules/tilemap.src.js', [_modules['parts/Globals.js'], _modules['parts/Utilities.js']], function (H, U) {
+    _registerModule(_modules, 'Series/TilemapSeries.js', [_modules['Core/Series/Series.js'], _modules['Mixins/ColorSeries.js'], _modules['Core/Globals.js'], _modules['Core/Utilities.js']], function (BaseSeries, ColorSeriesModule, H, U) {
         /* *
          *
          *  Tilemaps module
@@ -41,19 +41,33 @@
          *  !!!!!!! SOURCE GETS TRANSPILED BY TYPESCRIPT. EDIT TS FILE ONLY. !!!!!!!
          *
          * */
-        var clamp = U.clamp, extend = U.extend, pick = U.pick;
+        var colorPointMixin = ColorSeriesModule.colorPointMixin;
+        var addEvent = U.addEvent,
+            clamp = U.clamp,
+            extend = U.extend,
+            pick = U.pick;
         /**
          * @typedef {"circle"|"diamond"|"hexagon"|"square"} Highcharts.TilemapShapeValue
          */
-        var seriesType = H.seriesType, 
-        // Utility func to get padding definition from tile size division
-        tilePaddingFromTileSize = function (series, xDiv, yDiv) {
+        ''; // detach doclets above
+        /**
+         * Utility func to get padding definition from tile size division
+         * @private
+         * @param {Highcharts.TilemapSeries} series
+         * series
+         * @param {Highcharts.number} xDiv
+         * xDiv
+         * @param {Highcharts.number} yDiv
+         * yDiv
+         * @return {Highcharts.TilemapPaddingObject}
+         */
+        function tilePaddingFromTileSize(series, xDiv, yDiv) {
             var options = series.options;
             return {
                 xPad: (options.colsize || 1) / -xDiv,
                 yPad: (options.rowsize || 1) / -yDiv
             };
-        };
+        }
         // Map of shape types.
         H.tileShapeTypes = {
             // Hexagon shape type.
@@ -68,31 +82,49 @@
                     }
                     var hexagon = this.tileEdges;
                     return [
-                        'M', hexagon.x2 - size, hexagon.y1 + size,
-                        'L', hexagon.x3 + size, hexagon.y1 + size,
-                        hexagon.x4 + size * 1.5, hexagon.y2,
-                        hexagon.x3 + size, hexagon.y3 - size,
-                        hexagon.x2 - size, hexagon.y3 - size,
-                        hexagon.x1 - size * 1.5, hexagon.y2,
-                        'Z'
+                        ['M', hexagon.x2 - size, hexagon.y1 + size],
+                        ['L', hexagon.x3 + size, hexagon.y1 + size],
+                        ['L', hexagon.x4 + size * 1.5, hexagon.y2],
+                        ['L', hexagon.x3 + size, hexagon.y3 - size],
+                        ['L', hexagon.x2 - size, hexagon.y3 - size],
+                        ['L', hexagon.x1 - size * 1.5, hexagon.y2],
+                        ['Z']
                     ];
                 },
                 translate: function () {
-                    var series = this, options = series.options, xAxis = series.xAxis, yAxis = series.yAxis, seriesPointPadding = options.pointPadding || 0, xPad = (options.colsize || 1) / 3, yPad = (options.rowsize || 1) / 2, yShift;
+                    var series = this,
+                        options = series.options,
+                        xAxis = series.xAxis,
+                        yAxis = series.yAxis,
+                        seriesPointPadding = options.pointPadding || 0,
+                        xPad = (options.colsize || 1) / 3,
+                        yPad = (options.rowsize || 1) / 2,
+                        yShift;
                     series.generatePoints();
                     series.points.forEach(function (point) {
                         var x1 = clamp(Math.floor(xAxis.len -
-                            xAxis.translate(point.x - xPad * 2, 0, 1, 0, 1)), -xAxis.len, 2 * xAxis.len), x2 = clamp(Math.floor(xAxis.len -
-                            xAxis.translate(point.x - xPad, 0, 1, 0, 1)), -xAxis.len, 2 * xAxis.len), x3 = clamp(Math.floor(xAxis.len -
-                            xAxis.translate(point.x + xPad, 0, 1, 0, 1)), -xAxis.len, 2 * xAxis.len), x4 = clamp(Math.floor(xAxis.len -
-                            xAxis.translate(point.x + xPad * 2, 0, 1, 0, 1)), -xAxis.len, 2 * xAxis.len), y1 = clamp(Math.floor(yAxis.translate(point.y - yPad, 0, 1, 0, 1)), -yAxis.len, 2 * yAxis.len), y2 = clamp(Math.floor(yAxis.translate(point.y, 0, 1, 0, 1)), -yAxis.len, 2 * yAxis.len), y3 = clamp(Math.floor(yAxis.translate(point.y + yPad, 0, 1, 0, 1)), -yAxis.len, 2 * yAxis.len), pointPadding = pick(point.pointPadding, seriesPointPadding), 
-                        // We calculate the point padding of the midpoints to
-                        // preserve the angles of the shape.
-                        midPointPadding = pointPadding *
-                            Math.abs(x2 - x1) / Math.abs(y3 - y2), xMidPadding = xAxis.reversed ?
-                            -midPointPadding : midPointPadding, xPointPadding = xAxis.reversed ?
-                            -pointPadding : pointPadding, yPointPadding = yAxis.reversed ?
-                            -pointPadding : pointPadding;
+                                xAxis.translate(point.x - xPad * 2, 0, 1, 0, 1)), -xAxis.len, 2 * xAxis.len),
+                            x2 = clamp(Math.floor(xAxis.len -
+                                xAxis.translate(point.x - xPad, 0, 1, 0, 1)), -xAxis.len, 2 * xAxis.len),
+                            x3 = clamp(Math.floor(xAxis.len -
+                                xAxis.translate(point.x + xPad, 0, 1, 0, 1)), -xAxis.len, 2 * xAxis.len),
+                            x4 = clamp(Math.floor(xAxis.len -
+                                xAxis.translate(point.x + xPad * 2, 0, 1, 0, 1)), -xAxis.len, 2 * xAxis.len),
+                            y1 = clamp(Math.floor(yAxis.translate(point.y - yPad, 0, 1, 0, 1)), -yAxis.len, 2 * yAxis.len),
+                            y2 = clamp(Math.floor(yAxis.translate(point.y, 0, 1, 0, 1)), -yAxis.len, 2 * yAxis.len),
+                            y3 = clamp(Math.floor(yAxis.translate(point.y + yPad, 0, 1, 0, 1)), -yAxis.len, 2 * yAxis.len),
+                            pointPadding = pick(point.pointPadding,
+                            seriesPointPadding), 
+                            // We calculate the point padding of the midpoints to
+                            // preserve the angles of the shape.
+                            midPointPadding = pointPadding *
+                                Math.abs(x2 - x1) / Math.abs(y3 - y2),
+                            xMidPadding = xAxis.reversed ?
+                                -midPointPadding : midPointPadding,
+                            xPointPadding = xAxis.reversed ?
+                                -pointPadding : pointPadding,
+                            yPointPadding = yAxis.reversed ?
+                                -pointPadding : pointPadding;
                         // Shift y-values for every second grid column
                         if (point.x % 2) {
                             yShift = yShift || Math.round(Math.abs(y3 - y1) / 2) *
@@ -120,13 +152,13 @@
                         point.shapeType = 'path';
                         point.shapeArgs = {
                             d: [
-                                'M', x2, y1,
-                                'L', x3, y1,
-                                x4, y2,
-                                x3, y3,
-                                x2, y3,
-                                x1, y2,
-                                'Z'
+                                ['M', x2, y1],
+                                ['L', x3, y1],
+                                ['L', x4, y2],
+                                ['L', x3, y3],
+                                ['L', x2, y3],
+                                ['L', x1, y2],
+                                ['Z']
                             ]
                         };
                     });
@@ -145,27 +177,43 @@
                     }
                     var diamond = this.tileEdges;
                     return [
-                        'M', diamond.x2, diamond.y1 + size,
-                        'L', diamond.x3 + size, diamond.y2,
-                        diamond.x2, diamond.y3 - size,
-                        diamond.x1 - size, diamond.y2,
-                        'Z'
+                        ['M', diamond.x2, diamond.y1 + size],
+                        ['L', diamond.x3 + size, diamond.y2],
+                        ['L', diamond.x2, diamond.y3 - size],
+                        ['L', diamond.x1 - size, diamond.y2],
+                        ['Z']
                     ];
                 },
                 translate: function () {
-                    var series = this, options = series.options, xAxis = series.xAxis, yAxis = series.yAxis, seriesPointPadding = options.pointPadding || 0, xPad = (options.colsize || 1), yPad = (options.rowsize || 1) / 2, yShift;
+                    var series = this,
+                        options = series.options,
+                        xAxis = series.xAxis,
+                        yAxis = series.yAxis,
+                        seriesPointPadding = options.pointPadding || 0,
+                        xPad = (options.colsize || 1),
+                        yPad = (options.rowsize || 1) / 2,
+                        yShift;
                     series.generatePoints();
                     series.points.forEach(function (point) {
                         var x1 = clamp(Math.round(xAxis.len -
-                            xAxis.translate(point.x - xPad, 0, 1, 0, 0)), -xAxis.len, 2 * xAxis.len), x2 = clamp(Math.round(xAxis.len -
-                            xAxis.translate(point.x, 0, 1, 0, 0)), -xAxis.len, 2 * xAxis.len), x3 = clamp(Math.round(xAxis.len -
-                            xAxis.translate(point.x + xPad, 0, 1, 0, 0)), -xAxis.len, 2 * xAxis.len), y1 = clamp(Math.round(yAxis.translate(point.y - yPad, 0, 1, 0, 0)), -yAxis.len, 2 * yAxis.len), y2 = clamp(Math.round(yAxis.translate(point.y, 0, 1, 0, 0)), -yAxis.len, 2 * yAxis.len), y3 = clamp(Math.round(yAxis.translate(point.y + yPad, 0, 1, 0, 0)), -yAxis.len, 2 * yAxis.len), pointPadding = pick(point.pointPadding, seriesPointPadding), 
-                        // We calculate the point padding of the midpoints to
-                        // preserve the angles of the shape.
-                        midPointPadding = pointPadding *
-                            Math.abs(x2 - x1) / Math.abs(y3 - y2), xPointPadding = xAxis.reversed ?
-                            -midPointPadding : midPointPadding, yPointPadding = yAxis.reversed ?
-                            -pointPadding : pointPadding;
+                                xAxis.translate(point.x - xPad, 0, 1, 0, 0)), -xAxis.len, 2 * xAxis.len),
+                            x2 = clamp(Math.round(xAxis.len -
+                                xAxis.translate(point.x, 0, 1, 0, 0)), -xAxis.len, 2 * xAxis.len),
+                            x3 = clamp(Math.round(xAxis.len -
+                                xAxis.translate(point.x + xPad, 0, 1, 0, 0)), -xAxis.len, 2 * xAxis.len),
+                            y1 = clamp(Math.round(yAxis.translate(point.y - yPad, 0, 1, 0, 0)), -yAxis.len, 2 * yAxis.len),
+                            y2 = clamp(Math.round(yAxis.translate(point.y, 0, 1, 0, 0)), -yAxis.len, 2 * yAxis.len),
+                            y3 = clamp(Math.round(yAxis.translate(point.y + yPad, 0, 1, 0, 0)), -yAxis.len, 2 * yAxis.len),
+                            pointPadding = pick(point.pointPadding,
+                            seriesPointPadding), 
+                            // We calculate the point padding of the midpoints to
+                            // preserve the angles of the shape.
+                            midPointPadding = pointPadding *
+                                Math.abs(x2 - x1) / Math.abs(y3 - y2),
+                            xPointPadding = xAxis.reversed ?
+                                -midPointPadding : midPointPadding,
+                            yPointPadding = yAxis.reversed ?
+                                -pointPadding : pointPadding;
                         // Shift y-values for every second grid column
                         // We have to reverse the shift for reversed y-axes
                         if (point.x % 2) {
@@ -190,11 +238,11 @@
                         point.shapeType = 'path';
                         point.shapeArgs = {
                             d: [
-                                'M', x2, y1,
-                                'L', x3, y2,
-                                x2, y3,
-                                x1, y2,
-                                'Z'
+                                ['M', x2, y1],
+                                ['L', x3, y2],
+                                ['L', x2, y3],
+                                ['L', x1, y2],
+                                ['Z']
                             ]
                         };
                     });
@@ -212,11 +260,25 @@
                         .call(this, size + (size && this.radius));
                 },
                 translate: function () {
-                    var series = this, options = series.options, xAxis = series.xAxis, yAxis = series.yAxis, seriesPointPadding = options.pointPadding || 0, yRadius = (options.rowsize || 1) / 2, colsize = (options.colsize || 1), colsizePx, yRadiusPx, xRadiusPx, radius, forceNextRadiusCompute = false;
+                    var series = this,
+                        options = series.options,
+                        xAxis = series.xAxis,
+                        yAxis = series.yAxis,
+                        seriesPointPadding = options.pointPadding || 0,
+                        yRadius = (options.rowsize || 1) / 2,
+                        colsize = (options.colsize || 1),
+                        colsizePx,
+                        yRadiusPx,
+                        xRadiusPx,
+                        radius,
+                        forceNextRadiusCompute = false;
                     series.generatePoints();
                     series.points.forEach(function (point) {
                         var x = clamp(Math.round(xAxis.len -
-                            xAxis.translate(point.x, 0, 1, 0, 0)), -xAxis.len, 2 * xAxis.len), y = clamp(Math.round(yAxis.translate(point.y, 0, 1, 0, 0)), -yAxis.len, 2 * yAxis.len), pointPadding = seriesPointPadding, hasPerPointPadding = false;
+                                xAxis.translate(point.x, 0, 1, 0, 0)), -xAxis.len, 2 * xAxis.len),
+                            y = clamp(Math.round(yAxis.translate(point.y, 0, 1, 0, 0)), -yAxis.len, 2 * yAxis.len),
+                            pointPadding = seriesPointPadding,
+                            hasPerPointPadding = false;
                         // If there is point padding defined on a single point, add it
                         if (typeof point.pointPadding !== 'undefined') {
                             pointPadding = point.pointPadding;
@@ -290,16 +352,16 @@
         // Extension to add pixel padding for series. Uses getSeriesPixelPadding on each
         // series and adds the largest padding required. If no series has this function
         // defined, we add nothing.
-        H.addEvent(H.Axis, 'afterSetAxisTranslation', function () {
+        addEvent(H.Axis, 'afterSetAxisTranslation', function () {
             if (this.recomputingForTilemap || this.coll === 'colorAxis') {
                 return;
             }
             var axis = this, 
-            // Find which series' padding to use
-            seriesPadding = axis.series
-                .map(function (series) {
-                return series.getSeriesPixelPadding &&
-                    series.getSeriesPixelPadding(axis);
+                // Find which series' padding to use
+                seriesPadding = axis.series
+                    .map(function (series) {
+                    return series.getSeriesPixelPadding &&
+                        series.getSeriesPixelPadding(axis);
             })
                 .reduce(function (a, b) {
                 return (a && a.padding) > (b && b.padding) ?
@@ -328,7 +390,7 @@
          *
          * @augments Highcharts.Series
          */
-        seriesType('tilemap', 'heatmap'
+        BaseSeries.seriesType('tilemap', 'heatmap'
         /**
          * A tilemap series is a type of heatmap where the tile shapes are
          * configurable.
@@ -348,12 +410,16 @@
          *
          * @extends      plotOptions.heatmap
          * @since        6.0.0
-         * @excluding    jitter, joinBy, shadow, allAreas, mapData, data
+         * @excluding    jitter, joinBy, shadow, allAreas, mapData, marker, data,
+         *               dataSorting, boostThreshold, boostBlending
          * @product      highcharts highmaps
          * @requires     modules/tilemap.js
          * @optionparent plotOptions.tilemap
          */
         , {
+            // Remove marker from tilemap default options, as it was before
+            // heatmap refactoring.
+            marker: null,
             states: {
                 hover: {
                     halo: {
@@ -414,10 +480,29 @@
              */
             tileShape: 'hexagon'
         }, {
+            // Use drawPoints, markerAttribs, pointAttribs methods from the old
+            // heatmap implementation.
+            // TODO: Consider standarizing heatmap and tilemap into more
+            // consistent form.
+            markerAttribs: H.seriesTypes.scatter.prototype.markerAttribs,
+            pointAttribs: H.seriesTypes.column.prototype.pointAttribs,
+            // Revert the noop on getSymbol.
+            getSymbol: H.noop,
+            drawPoints: function () {
+                var _this = this;
+                // In styled mode, use CSS, otherwise the fill used in the style
+                // sheet will take precedence over the fill attribute.
+                H.seriesTypes.column.prototype.drawPoints.call(this);
+                this.points.forEach(function (point) {
+                    point.graphic &&
+                        point.graphic[_this.chart.styledMode ? 'css' : 'animate'](_this.colorAttribs(point));
+                });
+            },
             // Set tile shape object on series
             setOptions: function () {
                 // Call original function
-                var ret = H.seriesTypes.heatmap.prototype.setOptions.apply(this, Array.prototype.slice.call(arguments));
+                var ret = H.seriesTypes.heatmap.prototype.setOptions.apply(this,
+                    Array.prototype.slice.call(arguments));
                 this.tileShape = H.tileShapeTypes[ret.tileShape];
                 return ret;
             },
@@ -427,7 +512,10 @@
             },
             // Get metrics for padding of axis for this series
             getSeriesPixelPadding: function (axis) {
-                var isX = axis.isXAxis, padding = this.tileShape.getSeriesPadding(this), coord1, coord2;
+                var isX = axis.isXAxis,
+                    padding = this.tileShape.getSeriesPadding(this),
+                    coord1,
+                    coord2;
                 // If the shape type does not require padding, return no-op padding
                 if (!padding) {
                     return {
@@ -467,14 +555,15 @@
             haloPath: function () {
                 return this.series.tileShape.haloPath.apply(this, Array.prototype.slice.call(arguments));
             }
-        }, H.colorPointMixin));
+        }, colorPointMixin));
         /**
          * A `tilemap` series. If the [type](#series.tilemap.type) option is
          * not specified, it is inherited from [chart.type](#chart.type).
          *
          * @extends   series,plotOptions.tilemap
          * @excluding allAreas, dataParser, dataURL, joinBy, mapData, marker,
-         *            pointRange, shadow, stack
+         *            pointRange, shadow, stack, dataSorting, boostThreshold,
+         *            boostBlending
          * @product   highcharts highmaps
          * @requires  modules/tilemap.js
          * @apioption series.tilemap
